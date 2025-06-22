@@ -1,172 +1,176 @@
-# RAG Knowledge Base Platform
+# Knowledge Base Platform
 
-A comprehensive platform for managing knowledge bases and documents with AI-powered RAG (Retrieval-Augmented Generation) workflows.
+A modern knowledge base platform built with Next.js frontend and FastAPI backend for managing RAG (Retrieval-Augmented Generation) workflows.
 
-## 🏗️ Project Structure
+## Project Structure
 
 ```
-kb-streamlit/
-├── frontend/                 # Frontend applications
-│   ├── streamlit/           # Streamlit frontend (legacy)
-│   │   ├── main.py          # Main Streamlit app entry point
-│   │   └── components/      # UI components
-│   │       ├── header.py    # Header with project selection
-│   │       ├── sidebar.py   # Contextual actions sidebar
-│   │       └── documents.py # Document management interface
-│   └── nextjs/              # Next.js frontend (modern)
-│       ├── app/             # Next.js App Router
-│       ├── components/      # React components
-│       ├── lib/             # Utility libraries
-│       └── package.json     # Node.js dependencies
-├── backend/                 # FastAPI backend application
-│   ├── main.py             # FastAPI app and endpoints
-│   ├── models.py           # Pydantic data models
-│   ├── data.py             # Mock data and data access functions
-│   └── api/                # API client and utilities
-│       └── client.py       # HTTP client for frontend-backend communication
-├── start_backend.py        # Backend startup script
-└── pyproject.toml          # Project configuration
+kb-platform/
+├── backend/              # FastAPI backend
+│   ├── api/             # API client utilities
+│   ├── main.py          # FastAPI application
+│   ├── models.py        # Pydantic models
+│   ├── data.py          # Data access layer
+│   └── storage.py       # Storage system
+├── frontend/
+│   └── nextjs/          # Next.js frontend
+│       ├── app/         # Next.js App Router
+│       ├── components/  # React components
+│       └── lib/         # Utilities and API client
+├── data/                # JSON storage files
+├── pyproject.toml       # Poetry configuration
+└── README.md           # This file
 ```
 
-## 🚀 Quick Start
+## Features
 
-### Prerequisites
+- **Modern UI**: Clean, minimal design with Next.js 15 and React 19
+- **Type Safety**: Full TypeScript support
+- **Real-time Updates**: Client-side state management
+- **Document Management**: Upload, process, and manage documents
+- **Knowledge Base Management**: Create and manage knowledge bases
+- **Project Organization**: Multi-project support
+- **RAG Workflows**: Support for document processing and embedding
+
+## Prerequisites
+
 - Python 3.11+
-- Poetry (for dependency management)
-- Node.js 18+ (for Next.js frontend)
+- Node.js 24+
+- Poetry (for Python dependency management)
+- npm (for Node.js dependency management)
 
-### Installation
-```bash
-# Clone the repository
-git clone <repository-url>
-cd kb-streamlit
+## Quick Start
 
-# Install Python dependencies
-poetry install
+1. **Clone the repository**:
+   ```bash
+   git clone <repository-url>
+   cd kb-platform
+   ```
 
-# Activate virtual environment
-poetry shell
+2. **Install Python dependencies**:
+   ```bash
+   poetry install
+   ```
 
-# Install Node.js dependencies (for Next.js frontend)
-poe nextjs-install
-```
+3. **Install Node.js dependencies**:
+   ```bash
+   cd frontend/nextjs
+   npm install
+   cd ../..
+   ```
 
-### Running the Application
+4. **Start the backend**:
+   ```bash
+   poe backend
+   ```
 
-#### Backend (Required for both frontends)
-```bash
-# Start the backend API
-poe backend
-```
+5. **Start the frontend** (in a new terminal):
+   ```bash
+   poe nextjs
+   ```
 
-#### Frontend Options
+6. **Open your browser**:
+   - **Frontend**: http://localhost:3000
+   - **Backend API**: http://localhost:8000
+   - **API Documentation**: http://localhost:8000/docs
 
-**Option 1: Streamlit Frontend (Legacy)**
-```bash
-# Start the Streamlit frontend
-poe streamlit
-```
+## Development
 
-**Option 2: Next.js Frontend (Modern)**
-```bash
-# Start the Next.js frontend
-poe nextjs
-```
+### Backend Development
 
-## 🌐 Access Points
+The backend is built with FastAPI and provides:
 
-- **Streamlit Frontend**: http://localhost:8501
-- **Next.js Frontend**: http://localhost:3000
-- **Backend API**: http://localhost:8000
-- **API Documentation**: http://localhost:8000/docs
-- **Health Check**: http://localhost:8000/health
+- RESTful API endpoints
+- Automatic API documentation
+- Type validation with Pydantic
+- JSON file storage system
+- CORS support for frontend integration
 
-## 📋 Features
-
-### Frontend Options
-
-#### Streamlit Frontend (Legacy)
-- **Project Management**: Create and manage projects
-- **Knowledge Base Management**: Create, view, and manage KBs with table-based interface
-- **Document Management**: Upload, process, and manage documents within KBs
-- **Version Control**: Manage KB and document versions
-- **Contextual Actions**: Sidebar with context-aware actions
-- **Table-based UI**: Scalable table interfaces for large datasets
-
-#### Next.js Frontend (Modern)
-- **Modern UI**: Built with Next.js 14, TypeScript, and Tailwind CSS
-- **Type Safety**: Full TypeScript support with proper type definitions
-- **Real-time Updates**: Client-side state management with React hooks
-- **Responsive Design**: Mobile-friendly interface with Tailwind CSS
-- **Better Performance**: No full page reruns, smooth interactions
-- **True Modals**: Proper modal dialogs and overlays
-- **Advanced State Management**: Local storage persistence, better UX
-
-### Backend (FastAPI)
-- **RESTful API**: Complete CRUD operations for all entities
-- **Document Processing**: Simulated document processing pipeline
-- **Version Management**: KB and document versioning
-- **Mock Data**: Comprehensive mock data for testing
-- **Health Checks**: API health monitoring
-
-## 🏛️ Architecture
-
-### Frontend-Backend Separation
-- **Frontends**: Streamlit (legacy) and Next.js (modern) options
-- **Backend**: FastAPI REST API with data models and business logic
-- **API Client**: HTTP client for frontend-backend communication
-
-### Data Flow
-1. **Frontend** → **API Client** → **Backend API** → **Data Layer**
-2. **Backend** → **Data Models** → **Mock Data** (for development)
-
-### Key Design Principles
-- **Separation of Concerns**: Clear frontend/backend separation
-- **Multiple Frontend Options**: Choose between Streamlit and Next.js
-- **Table-based UI**: Scalable interfaces for large datasets
-- **Contextual Actions**: Actions relevant to current view
-- **Mock Implementation**: Ready for real backend integration
-
-## 🔧 Development
+**Key Endpoints**:
+- `GET /api/projects` - List all projects
+- `POST /api/projects` - Create a new project
+- `GET /api/projects/{id}/knowledge-bases` - List KBs for a project
+- `POST /api/projects/{id}/knowledge-bases` - Create a KB
+- `GET /api/knowledge-bases/{id}/documents` - List documents for a KB
+- `POST /api/knowledge-bases/{id}/documents/upload` - Upload a document
 
 ### Frontend Development
 
-#### Streamlit Frontend
-- Add components in `frontend/streamlit/components/`
-- Update `frontend/streamlit/main.py`
-- Use `poe streamlit` to run
+The frontend is built with Next.js 15 and React 19:
 
-#### Next.js Frontend
-- Add components in `frontend/nextjs/components/`
-- Update `frontend/nextjs/app/page.tsx`
-- Use `poe nextjs` to run
-- See `frontend/nextjs/README.md` for detailed setup
+- **Modern Architecture**: App Router with server and client components
+- **Type Safety**: Full TypeScript support
+- **Styling**: Tailwind CSS for responsive design
+- **State Management**: React hooks and localStorage
+- **API Integration**: Type-safe API client
 
-### Backend Development
-- Add models in `backend/models.py`
-- Add endpoints in `backend/main.py`
-- Update `backend/api/client.py` for new endpoints
+**Key Components**:
+- `UserMenu` - Project selection and management
+- `KnowledgeBases` - KB creation and management
+- `Documents` - Document upload and status tracking
+- `Dashboard` - Overview and analytics
+- `Sidebar` - Navigation and KB selection
 
-### Available Commands
+## Available Commands
+
+### Backend
 ```bash
-# Backend
-poe backend                    # Start FastAPI backend
-
-# Streamlit Frontend
-poe streamlit                  # Start Streamlit frontend
-
-# Next.js Frontend
-poe nextjs-install            # Install Node.js dependencies
-poe nextjs                    # Start Next.js development server
-poe nextjs-build              # Build Next.js for production
-poe nextjs-start              # Start Next.js production server
+poe backend                  # Start FastAPI backend
 ```
 
-## 📝 Notes
+### Frontend
+```bash
+poe nextjs                  # Start Next.js development server
+poe nextjs-install          # Clean install of Node.js dependencies
+poe nextjs-build            # Build for production
+poe nextjs-start            # Start production server
+```
 
-- **Streamlit Frontend**: Good for rapid prototyping, but limited for complex UIs
-- **Next.js Frontend**: Better for production applications with complex interactions
-- This is a proof-of-concept with mock data
-- Document processing is simulated
-- Ready for integration with real document processing and embedding services
-- Both frontends share the same FastAPI backend 
+## Architecture
+
+### Backend Architecture
+- **FastAPI**: Modern, fast web framework
+- **Pydantic**: Data validation and serialization
+- **Storage**: Hybrid in-memory and JSON file storage
+- **CORS**: Cross-origin resource sharing for frontend
+
+### Frontend Architecture
+- **Next.js 15**: React framework with App Router
+- **React 19**: Latest React with concurrent features
+- **TypeScript**: Type safety and better developer experience
+- **Tailwind CSS**: Utility-first CSS framework
+- **API Client**: Type-safe HTTP client for backend communication
+
+## Data Flow
+
+1. **Project Selection**: User selects or creates a project
+2. **Knowledge Base Management**: Create and manage KBs within projects
+3. **Document Upload**: Upload documents to specific KBs
+4. **Processing**: Documents are processed and chunked
+5. **Status Tracking**: Real-time status updates for document processing
+
+## Storage
+
+The platform uses a hybrid storage approach:
+- **In-Memory**: Fast access for active data
+- **JSON Files**: Persistent storage in the `data/` directory
+- **Automatic Sync**: Data is automatically saved and loaded
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests if applicable
+5. Submit a pull request
+
+## License
+
+This project is licensed under the MIT License.
+
+## Support
+
+For support and questions:
+- Check the API documentation at http://localhost:8000/docs
+- Review the component documentation in the codebase
+- Open an issue for bugs or feature requests 

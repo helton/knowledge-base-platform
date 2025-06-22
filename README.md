@@ -1,77 +1,123 @@
-# Knowledge Base Streamlit App
+# RAG Knowledge Base Platform
 
-A modern Streamlit application for managing knowledge bases and documents with a FastAPI backend.
+A comprehensive platform for managing knowledge bases and documents with AI-powered RAG (Retrieval-Augmented Generation) workflows.
 
-## Features
-
-- **User Account Management**: Select and switch between different projects
-- **Knowledge Base Management**: List, view, and manage knowledge bases
-- **Version Control**: Select different versions for each knowledge base
-- **Modern UI**: Clean and intuitive interface with sidebar navigation
-- **FastAPI Backend**: RESTful API for data management
-
-## Project Structure
+## 🏗️ Project Structure
 
 ```
 kb-streamlit/
-├── app/
-│   ├── __init__.py
-│   ├── main.py              # Streamlit main application
-│   ├── components/          # Reusable UI components
-│   │   ├── __init__.py
-│   │   ├── sidebar.py       # Sidebar navigation
-│   │   ├── header.py        # Header with user menu
-│   │   └── kb_list.py       # Knowledge base list component
-│   └── api/
-│       ├── __init__.py
-│       └── client.py        # API client for backend communication
-├── backend/
-│   ├── __init__.py
-│   ├── main.py              # FastAPI backend server
-│   ├── models.py            # Pydantic models
-│   └── data.py              # Mock data and business logic
-├── pyproject.toml           # Poetry configuration
-└── README.md
+├── frontend/                 # Streamlit frontend application
+│   ├── main.py              # Main Streamlit app entry point
+│   └── components/          # UI components
+│       ├── header.py        # Header with project selection
+│       ├── sidebar.py       # Contextual actions sidebar
+│       └── documents.py     # Document management interface
+├── backend/                 # FastAPI backend application
+│   ├── main.py             # FastAPI app and endpoints
+│   ├── models.py           # Pydantic data models
+│   ├── data.py             # Mock data and data access functions
+│   └── api/                # API client and utilities
+│       └── client.py       # HTTP client for frontend-backend communication
+├── start_frontend.py       # Frontend startup script
+├── start_backend.py        # Backend startup script
+└── pyproject.toml          # Project configuration
 ```
 
-## Setup
+## 🚀 Quick Start
 
-1. **Install Poetry** (if not already installed):
-   ```bash
-   pip install poetry
-   ```
+### Prerequisites
+- Python 3.11+
+- Poetry (for dependency management)
 
-2. **Install dependencies**:
-   ```bash
-   poetry install
-   ```
+### Installation
+```bash
+# Clone the repository
+git clone <repository-url>
+cd kb-streamlit
 
-3. **Run the backend server**:
-   ```bash
-   poetry run python backend/main.py
-   ```
+# Install dependencies
+poetry install
 
-4. **Run the Streamlit app** (in a new terminal):
-   ```bash
-   poetry run streamlit run app/main.py
-   ```
+# Activate virtual environment
+poetry shell
+```
 
-## Usage
+### Running the Application
 
-1. Open your browser and navigate to `http://localhost:8501`
-2. Use the user menu in the top-right corner to select your project
-3. Use the sidebar to navigate between different knowledge bases
-4. Select different versions for each knowledge base as needed
+#### Option 1: Using Poetry Tasks
+```bash
+# Start the backend API
+poe backend
 
-## Development
+# In another terminal, start the frontend
+poe frontend
+```
 
-- **Backend API**: Runs on `http://localhost:8000`
-- **Streamlit App**: Runs on `http://localhost:8501`
-- **API Documentation**: Available at `http://localhost:8000/docs`
+#### Option 2: Using Direct Scripts
+```bash
+# Start the backend API
+python start_backend.py
 
-## API Endpoints
+# In another terminal, start the frontend
+python start_frontend.py
+```
 
-- `GET /projects` - List all projects
-- `GET /projects/{project_id}/knowledge-bases` - List knowledge bases for a project
-- `GET /knowledge-bases/{kb_id}/versions` - List versions for a knowledge base
-- `GET /knowledge-bases/{kb_id}/versions/{version_id}` - Get specific version details 
+## 🌐 Access Points
+
+- **Frontend**: http://localhost:8501
+- **Backend API**: http://localhost:8000
+- **API Documentation**: http://localhost:8000/docs
+- **Health Check**: http://localhost:8000/health
+
+## 📋 Features
+
+### Frontend (Streamlit)
+- **Project Management**: Create and manage projects
+- **Knowledge Base Management**: Create, view, and manage KBs with table-based interface
+- **Document Management**: Upload, process, and manage documents within KBs
+- **Version Control**: Manage KB and document versions
+- **Contextual Actions**: Sidebar with context-aware actions
+- **Table-based UI**: Scalable table interfaces for large datasets
+
+### Backend (FastAPI)
+- **RESTful API**: Complete CRUD operations for all entities
+- **Document Processing**: Simulated document processing pipeline
+- **Version Management**: KB and document versioning
+- **Mock Data**: Comprehensive mock data for testing
+- **Health Checks**: API health monitoring
+
+## 🏛️ Architecture
+
+### Frontend-Backend Separation
+- **Frontend**: Pure Streamlit application with UI components
+- **Backend**: FastAPI REST API with data models and business logic
+- **API Client**: HTTP client in backend/api for frontend-backend communication
+
+### Data Flow
+1. **Frontend** → **API Client** → **Backend API** → **Data Layer**
+2. **Backend** → **Data Models** → **Mock Data** (for development)
+
+### Key Design Principles
+- **Separation of Concerns**: Clear frontend/backend separation
+- **Table-based UI**: Scalable interfaces for large datasets
+- **Contextual Actions**: Actions relevant to current view
+- **Mock Implementation**: Ready for real backend integration
+
+## 🔧 Development
+
+### Adding New Features
+1. **Backend**: Add models in `backend/models.py`, endpoints in `backend/main.py`
+2. **Frontend**: Add components in `frontend/components/`, update `frontend/main.py`
+3. **API Client**: Update `backend/api/client.py` for new endpoints
+
+### Code Organization
+- **Frontend**: UI logic and user interactions
+- **Backend**: Business logic, data models, and API endpoints
+- **API Client**: HTTP communication layer
+
+## 📝 Notes
+
+- This is a proof-of-concept with mock data
+- Document processing is simulated
+- Ready for integration with real document processing and embedding services
+- Table-based UI designed for scalability with large datasets 

@@ -1,0 +1,15 @@
+[
+  {
+    "id": "62a84912-754b-4b13-b113-95600092cf8c",
+    "name": "kb 123",
+    "description": "gdgfxdfgdgfdgdf",
+    "project_id": "76e3f912-4d20-4a71-ad2b-b02886a5c8c2",
+    "status": "active",
+    "access_level": "private",
+    "is_primary": false,
+    "current_version": null,
+    "created_by": "4bb8e9e6-9302-4563-b2ad-76381459d45d",
+    "created_at": "2025-06-22 17:56:17.974388",
+    "updated_at": "2025-06-22 17:56:17.974392"
+  }
+]

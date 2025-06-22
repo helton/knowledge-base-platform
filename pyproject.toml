@@ -33,12 +33,40 @@ target-version = ['py38']
 testpaths = ["tests"]
 python_files = ["test_*.py"] 
 
-[tool.poe.tasks.frontend]
-shell = """
-  python start_frontend.py
-"""
-
 [tool.poe.tasks.backend]
 shell = """
   python start_backend.py
+"""
+
+[tool.poe.tasks.streamlit]
+shell = """
+  cd frontend/streamlit
+  streamlit run main.py
+"""
+
+[tool.poe.tasks.nextjs]
+shell = """
+  cd frontend/nextjs
+  npm run dev
+"""
+
+[tool.poe.tasks.nextjs-install]
+shell = """
+  cd frontend/nextjs
+  rm -rf node_modules package-lock.json
+  npm install
+  #npm cache clean --force
+  #npm install --force --legacy-peer-deps
+"""
+
+[tool.poe.tasks.nextjs-build]
+shell = """
+  cd frontend/nextjs
+  npm run build
+"""
+
+[tool.poe.tasks.nextjs-start]
+shell = """
+  cd frontend/nextjs
+  npm start
 """

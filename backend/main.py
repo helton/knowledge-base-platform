@@ -4,12 +4,14 @@ from typing import List, Optional
 import uvicorn
 import asyncio
 import uuid
+from datetime import datetime
 
 from .models import (
     Project, KnowledgeBase, KnowledgeBaseVersion, Document, DocumentVersion,
     ProjectList, KnowledgeBaseList, DocumentList, DocumentVersionList, 
     KnowledgeBaseVersionList, ProcessingStatus, CreateKnowledgeBaseRequest,
-    CreateVersionRequest, UploadDocumentRequest, User, UserRole, AccessLevel
+    CreateVersionRequest, UploadDocumentRequest, User, UserRole, AccessLevel,
+    ProjectUser
 )
 from .data import (
     get_all_projects, get_project_by_id, get_knowledge_bases_by_project,
@@ -17,8 +19,10 @@ from .data import (
     get_documents_by_project, get_document_by_id, get_document_versions_by_document,
     get_document_version_by_id, process_document, create_knowledge_base,
     create_knowledge_base_version, create_document, deprecate_knowledge_base_version,
-    deprecate_document_version, set_primary_knowledge_base, get_all_users
+    deprecate_document_version, set_primary_knowledge_base, get_all_users,
+    get_documents_by_kb
 )
+from .storage import storage
 
 # Create FastAPI app
 app = FastAPI(
@@ -30,7 +34,7 @@ app = FastAPI(
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:8501"],  # Streamlit app
+    allow_origins=["http://localhost:8501", "http://localhost:3000"],  # Streamlit app + Next.js
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -50,7 +54,7 @@ async def health_check():
 
 
 # User endpoints
-@app.get("/users", tags=["Users"])
+@app.get("/api/users", tags=["Users"])
 async def get_users():
     """Get all users"""
     users = get_all_users()
@@ -58,14 +62,14 @@ async def get_users():
 
 
 # Project endpoints
-@app.get("/projects", response_model=ProjectList, tags=["Projects"])
+@app.get("/api/projects", response_model=ProjectList, tags=["Projects"])
 async def get_projects():
     """Get all projects"""
     projects = get_all_projects()
     return ProjectList(projects=projects)
 
 
-@app.get("/projects/{project_id}", response_model=Project, tags=["Projects"])
+@app.get("/api/projects/{project_id}", response_model=Project, tags=["Projects"])
 async def get_project(project_id: str):
     """Get a specific project by ID"""
     project = get_project_by_id(project_id)
@@ -74,7 +78,7 @@ async def get_project(project_id: str):
     return project
 
 
-@app.get("/projects/{project_id}/knowledge-bases", response_model=KnowledgeBaseList, tags=["Knowledge Bases"])
+@app.get("/api/projects/{project_id}/knowledge-bases", response_model=KnowledgeBaseList, tags=["Knowledge Bases"])
 async def get_project_knowledge_bases(project_id: str):
     """Get all knowledge bases for a specific project"""
     # Verify project exists
@@ -86,7 +90,7 @@ async def get_project_knowledge_bases(project_id: str):
     return KnowledgeBaseList(knowledge_bases=knowledge_bases)
 
 
-@app.post("/projects/{project_id}/knowledge-bases", response_model=KnowledgeBase, tags=["Knowledge Bases"])
+@app.post("/api/projects/{project_id}/knowledge-bases", response_model=KnowledgeBase, tags=["Knowledge Bases"])
 async def create_project_knowledge_base(
     project_id: str, 
     request: CreateKnowledgeBaseRequest
@@ -113,7 +117,7 @@ async def create_project_knowledge_base(
 
 
 # Knowledge Base endpoints
-@app.get("/knowledge-bases/{kb_id}", response_model=KnowledgeBase, tags=["Knowledge Bases"])
+@app.get("/api/knowledge-bases/{kb_id}", response_model=KnowledgeBase, tags=["Knowledge Bases"])
 async def get_knowledge_base(kb_id: str):
     """Get a specific knowledge base by ID"""
     knowledge_base = get_knowledge_base_by_id(kb_id)
@@ -122,7 +126,7 @@ async def get_knowledge_base(kb_id: str):
     return knowledge_base
 
 
-@app.put("/knowledge-bases/{kb_id}/primary", tags=["Knowledge Bases"])
+@app.put("/api/knowledge-bases/{kb_id}/primary", tags=["Knowledge Bases"])
 async def set_kb_as_primary(kb_id: str):
     """Set a knowledge base as primary for its project"""
     success = set_primary_knowledge_base(kb_id)
@@ -132,7 +136,7 @@ async def set_kb_as_primary(kb_id: str):
 
 
 # Knowledge Base Version endpoints
-@app.get("/knowledge-bases/{kb_id}/versions", response_model=KnowledgeBaseVersionList, tags=["Versions"])
+@app.get("/api/knowledge-bases/{kb_id}/versions", response_model=KnowledgeBaseVersionList, tags=["Versions"])
 async def get_knowledge_base_versions(kb_id: str):
     """Get all versions for a specific knowledge base"""
     # Verify knowledge base exists
@@ -144,7 +148,7 @@ async def get_knowledge_base_versions(kb_id: str):
     return KnowledgeBaseVersionList(versions=versions)
 
 
-@app.post("/knowledge-bases/{kb_id}/versions", response_model=KnowledgeBaseVersion, tags=["Versions"])
+@app.post("/api/knowledge-bases/{kb_id}/versions", response_model=KnowledgeBaseVersion, tags=["Versions"])
 async def create_kb_version(
     kb_id: str,
     request: CreateVersionRequest
@@ -175,7 +179,7 @@ async def create_kb_version(
     return kb_version
 
 
-@app.get("/knowledge-bases/{kb_id}/versions/{version_id}", response_model=KnowledgeBaseVersion, tags=["Versions"])
+@app.get("/api/knowledge-bases/{kb_id}/versions/{version_id}", response_model=KnowledgeBaseVersion, tags=["Versions"])
 async def get_version(kb_id: str, version_id: str):
     """Get a specific version by ID"""
     # Verify knowledge base exists
@@ -190,7 +194,7 @@ async def get_version(kb_id: str, version_id: str):
     return version
 
 
-@app.put("/knowledge-bases/{kb_id}/versions/{version_id}/deprecate", tags=["Versions"])
+@app.put("/api/knowledge-bases/{kb_id}/versions/{version_id}/deprecate", tags=["Versions"])
 async def deprecate_kb_version(kb_id: str, version_id: str):
     """Deprecate a knowledge base version"""
     # Verify knowledge base exists
@@ -206,7 +210,71 @@ async def deprecate_kb_version(kb_id: str, version_id: str):
 
 
 # Document endpoints
-@app.get("/projects/{project_id}/documents", response_model=DocumentList, tags=["Documents"])
+@app.get("/api/knowledge-bases/{kb_id}/documents", response_model=DocumentList, tags=["Documents"])
+async def get_kb_documents(kb_id: str):
+    """Get all documents for a specific knowledge base"""
+    # Verify knowledge base exists
+    knowledge_base = get_knowledge_base_by_id(kb_id)
+    if not knowledge_base:
+        raise HTTPException(status_code=404, detail="Knowledge base not found")
+    
+    documents = get_documents_by_kb(kb_id)
+    return DocumentList(documents=documents)
+
+
+@app.post("/api/knowledge-bases/{kb_id}/documents/upload", tags=["Documents"])
+async def upload_kb_document(
+    kb_id: str,
+    background_tasks: BackgroundTasks,
+    file: UploadFile = File(...),
+    name: str = Form(...),
+    description: Optional[str] = Form(None),
+    chunking_method: str = Form("fixed_size"),
+    embedding_provider: str = Form("openai"),
+    embedding_model: str = Form("text-embedding-ada-002"),
+    chunk_size: int = Form(1000),
+    chunk_overlap: int = Form(200)
+):
+    """Upload and process a document for a knowledge base"""
+    # Verify knowledge base exists
+    knowledge_base = get_knowledge_base_by_id(kb_id)
+    if not knowledge_base:
+        raise HTTPException(status_code=404, detail="Knowledge base not found")
+    
+    # For now, use the first user as creator. In a real app, you'd get this from auth
+    users = get_all_users()
+    if not users:
+        raise HTTPException(status_code=500, detail="No users available")
+    
+    # Create document record
+    doc = create_document(
+        knowledge_base_id=kb_id,
+        name=name,
+        description=description or "",
+        file_path=f"/uploads/{file.filename}",
+        file_size=len(await file.read()),
+        mime_type=file.content_type or "application/octet-stream",
+        created_by=users[0].id
+    )
+    
+    # Reset file position for background processing
+    await file.seek(0)
+    
+    # Add background task for processing
+    processing_config = {
+        "chunking_method": chunking_method,
+        "embedding_provider": embedding_provider,
+        "embedding_model": embedding_model,
+        "chunk_size": chunk_size,
+        "chunk_overlap": chunk_overlap
+    }
+    
+    background_tasks.add_task(process_document, doc.id, processing_config)
+    
+    return {"message": "Document uploaded and processing started", "document_id": doc.id}
+
+
+@app.get("/api/projects/{project_id}/documents", response_model=DocumentList, tags=["Documents"])
 async def get_project_documents(project_id: str):
     """Get all documents for a specific project"""
     # Verify project exists
@@ -218,60 +286,7 @@ async def get_project_documents(project_id: str):
     return DocumentList(documents=documents)
 
 
-@app.post("/projects/{project_id}/documents/upload", tags=["Documents"])
-async def upload_document(
-    project_id: str,
-    background_tasks: BackgroundTasks,
-    file: UploadFile = File(...),
-    name: str = Form(...),
-    description: Optional[str] = Form(None),
-    chunking_method: str = Form("fixed_size"),
-    embedding_provider: str = Form("openai"),
-    embedding_model: str = Form("text-embedding-ada-002"),
-    chunk_size: int = Form(1000),
-    chunk_overlap: int = Form(200)
-):
-    """Upload and process a document"""
-    # Verify project exists
-    project = get_project_by_id(project_id)
-    if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
-    
-    # For now, use the first user as creator. In a real app, you'd get this from auth
-    users = get_all_users()
-    if not users:
-        raise HTTPException(status_code=500, detail="No users available")
-    
-    # Create document record
-    doc = create_document(
-        project_id=project_id,
-        name=name,
-        description=description or "",
-        file_path=f"/uploads/{file.filename}",
-        file_size=len(await file.read()),
-        mime_type=file.content_type or "application/octet-stream",
-        created_by=users[0].id
-    )
-    
-    # Start processing in background
-    processing_config = {
-        "chunking_method": chunking_method,
-        "embedding_provider": embedding_provider,
-        "embedding_model": embedding_model,
-        "chunk_size": chunk_size,
-        "chunk_overlap": chunk_overlap
-    }
-    
-    background_tasks.add_task(process_document, doc.id, processing_config)
-    
-    return {
-        "message": "Document uploaded and processing started",
-        "document_id": doc.id,
-        "status": "processing"
-    }
-
-
-@app.get("/documents/{doc_id}", response_model=Document, tags=["Documents"])
+@app.get("/api/documents/{doc_id}", response_model=Document, tags=["Documents"])
 async def get_document(doc_id: str):
     """Get a specific document by ID"""
     document = get_document_by_id(doc_id)
@@ -280,7 +295,7 @@ async def get_document(doc_id: str):
     return document
 
 
-@app.get("/documents/{doc_id}/versions", response_model=DocumentVersionList, tags=["Documents"])
+@app.get("/api/documents/{doc_id}/versions", response_model=DocumentVersionList, tags=["Documents"])
 async def get_document_versions(doc_id: str):
     """Get all versions for a specific document"""
     # Verify document exists
@@ -292,7 +307,7 @@ async def get_document_versions(doc_id: str):
     return DocumentVersionList(document_versions=versions)
 
 
-@app.get("/documents/{doc_id}/versions/{version_id}", response_model=DocumentVersion, tags=["Documents"])
+@app.get("/api/documents/{doc_id}/versions/{version_id}", response_model=DocumentVersion, tags=["Documents"])
 async def get_document_version(doc_id: str, version_id: str):
     """Get a specific document version by ID"""
     # Verify document exists
@@ -302,12 +317,12 @@ async def get_document_version(doc_id: str, version_id: str):
     
     version = get_document_version_by_id(version_id)
     if not version or version.document_id != doc_id:
-        raise HTTPException(status_code=404, detail="Document version not found")
+        raise HTTPException(status_code=404, detail="Version not found")
     
     return version
 
 
-@app.put("/documents/{doc_id}/versions/{version_id}/deprecate", tags=["Documents"])
+@app.put("/api/documents/{doc_id}/versions/{version_id}/deprecate", tags=["Documents"])
 async def deprecate_doc_version(doc_id: str, version_id: str):
     """Deprecate a document version"""
     # Verify document exists
@@ -317,13 +332,12 @@ async def deprecate_doc_version(doc_id: str, version_id: str):
     
     success = deprecate_document_version(version_id)
     if not success:
-        raise HTTPException(status_code=404, detail="Document version not found")
+        raise HTTPException(status_code=404, detail="Version not found")
     
-    return {"message": "Document version deprecated successfully"}
+    return {"message": "Version deprecated successfully"}
 
 
-# Processing status endpoint
-@app.get("/documents/{doc_id}/status", response_model=ProcessingStatus, tags=["Documents"])
+@app.get("/api/documents/{doc_id}/status", response_model=ProcessingStatus, tags=["Documents"])
 async def get_document_processing_status(doc_id: str):
     """Get the processing status of a document"""
     document = get_document_by_id(doc_id)
@@ -337,6 +351,33 @@ async def get_document_processing_status(doc_id: str):
         progress=document.processing_progress,
         error_message=document.error_message
     )
+
+
+@app.post("/api/projects", response_model=Project, tags=["Projects"])
+async def create_project(request: dict):
+    """Create a new project"""
+    # Get the first user as creator (in a real app, you'd get this from auth)
+    users = storage.get_all_users()
+    if not users:
+        raise HTTPException(status_code=500, detail="No users available")
+    
+    creator_id = users[0].id
+    
+    project_data = {
+        "id": str(uuid.uuid4()),
+        "name": request.get("name", "New Project"),
+        "description": request.get("description", ""),
+        "created_by": creator_id,
+        "access_token": f"token_{uuid.uuid4().hex[:8]}",
+        "users": {
+            creator_id: ProjectUser(user_id=creator_id, role=UserRole.ADMIN)
+        },
+        "created_at": datetime.now(),
+        "updated_at": datetime.now()
+    }
+    
+    project = storage.create_project(project_data)
+    return project
 
 
 if __name__ == "__main__":

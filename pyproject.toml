@@ -13,6 +13,7 @@ uvicorn = "^0.24.0"
 requests = "^2.31.0"
 pydantic = "^2.5.0"
 python-multipart = "^0.0.6"
+psutil = "^5.9.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.4.0"
@@ -34,32 +35,35 @@ python_files = ["test_*.py"]
 
 [tool.poe.tasks.backend]
 shell = """
-  python start_backend.py
+  python -m backend.start
 """
 
-[tool.poe.tasks.nextjs]
+[tool.poe.tasks.kill-backend]
 shell = """
-  cd frontend/nextjs
+  python backend/kill.py
+"""
+
+[tool.poe.tasks.frontend]
+shell = """
+  cd frontend
   npm run dev
 """
 
-[tool.poe.tasks.nextjs-install]
+[tool.poe.tasks.frontend-install]
 shell = """
-  cd frontend/nextjs
+  cd frontend
   rm -rf node_modules package-lock.json
   npm install
-  #npm cache clean --force
-  #npm install --force --legacy-peer-deps
 """
 
-[tool.poe.tasks.nextjs-build]
+[tool.poe.tasks.frontend-build]
 shell = """
-  cd frontend/nextjs
+  cd frontend
   npm run build
 """
 
-[tool.poe.tasks.nextjs-start]
+[tool.poe.tasks.frontend-start]
 shell = """
-  cd frontend/nextjs
+  cd frontend
   npm start
 """

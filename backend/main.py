@@ -10,17 +10,19 @@ from .models import (
     Project, KnowledgeBase, KnowledgeBaseVersion, Document, DocumentVersion,
     ProjectList, KnowledgeBaseList, DocumentList, DocumentVersionList, 
     KnowledgeBaseVersionList, ProcessingStatus, CreateKnowledgeBaseRequest,
-    CreateVersionRequest, UploadDocumentRequest, User, UserRole, AccessLevel,
-    ProjectUser
+    CreateVersionRequest, UploadDocumentRequest, CreateDocumentVersionRequest,
+    DeprecateVersionRequest, User, UserRole, AccessLevel, ProjectUser
 )
 from .data import (
     get_all_projects, get_project_by_id, get_knowledge_bases_by_project,
     get_knowledge_base_by_id, get_versions_by_knowledge_base, get_version_by_id,
     get_documents_by_project, get_document_by_id, get_document_versions_by_document,
     get_document_version_by_id, process_document, create_knowledge_base,
-    create_knowledge_base_version, create_document, deprecate_knowledge_base_version,
-    deprecate_document_version, set_primary_knowledge_base, get_all_users,
-    get_documents_by_kb
+    create_knowledge_base_version, create_document, create_document_version,
+    deprecate_knowledge_base_version, deprecate_document_version,
+    deprecate_document_version_with_reason, set_primary_knowledge_base, 
+    get_all_users, get_documents_by_kb, get_latest_document_version,
+    get_active_document_versions
 )
 from .storage import storage
 
@@ -269,7 +271,7 @@ async def upload_kb_document(
         "chunk_overlap": chunk_overlap
     }
     
-    background_tasks.add_task(process_document, doc.id, processing_config)
+    background_tasks.add_task(process_document, doc.id, processing_config, users[0].id)
     
     return {"message": "Document uploaded and processing started", "document_id": doc.id}
 
@@ -335,6 +337,112 @@ async def deprecate_doc_version(doc_id: str, version_id: str):
         raise HTTPException(status_code=404, detail="Version not found")
     
     return {"message": "Version deprecated successfully"}
+
+
+@app.put("/api/documents/{doc_id}/versions/{version_id}/deprecate-with-reason", tags=["Documents"])
+async def deprecate_doc_version_with_reason(doc_id: str, version_id: str, request: DeprecateVersionRequest):
+    """Deprecate a document version with a reason"""
+    # Verify document exists
+    document = get_document_by_id(doc_id)
+    if not document:
+        raise HTTPException(status_code=404, detail="Document not found")
+    
+    # For now, use the first user as deprecator. In a real app, you'd get this from auth
+    users = get_all_users()
+    if not users:
+        raise HTTPException(status_code=500, detail="No users available")
+    
+    success = deprecate_document_version_with_reason(version_id, request.reason, users[0].id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Version not found")
+    
+    return {"message": "Version deprecated successfully", "reason": request.reason}
+
+
+@app.post("/api/documents/{doc_id}/versions", tags=["Documents"])
+async def create_document_version_endpoint(
+    doc_id: str,
+    background_tasks: BackgroundTasks,
+    file: UploadFile = File(...),
+    change_description: Optional[str] = Form(None),
+    chunking_method: str = Form("fixed_size"),
+    embedding_provider: str = Form("openai"),
+    embedding_model: str = Form("text-embedding-ada-002"),
+    chunk_size: int = Form(1000),
+    chunk_overlap: int = Form(200)
+):
+    """Create a new version of an existing document"""
+    # Verify document exists
+    document = get_document_by_id(doc_id)
+    if not document:
+        raise HTTPException(status_code=404, detail="Document not found")
+    
+    # For now, use the first user as creator. In a real app, you'd get this from auth
+    users = get_all_users()
+    if not users:
+        raise HTTPException(status_code=500, detail="No users available")
+    
+    # Create new document version
+    version_data = {
+        "change_description": change_description,
+        "chunking_method": chunking_method,
+        "embedding_provider": embedding_provider,
+        "embedding_model": embedding_model,
+        "chunk_size": chunk_size,
+        "chunk_overlap": chunk_overlap,
+        "file_path": f"/uploads/{file.filename}",
+        "file_size": len(await file.read()),
+        "mime_type": file.content_type or "application/octet-stream"
+    }
+    
+    version = create_document_version(doc_id, version_data, users[0].id)
+    
+    # Reset file position for background processing
+    await file.seek(0)
+    
+    # Add background task for processing
+    processing_config = {
+        "chunking_method": chunking_method,
+        "embedding_provider": embedding_provider,
+        "embedding_model": embedding_model,
+        "chunk_size": chunk_size,
+        "chunk_overlap": chunk_overlap
+    }
+    
+    background_tasks.add_task(process_document, doc_id, processing_config, users[0].id)
+    
+    return {
+        "message": "Document version created and processing started", 
+        "version_id": version.id,
+        "version_number": version.version_number
+    }
+
+
+@app.get("/api/documents/{doc_id}/versions/latest", response_model=DocumentVersion, tags=["Documents"])
+async def get_latest_document_version_endpoint(doc_id: str):
+    """Get the latest version of a document"""
+    # Verify document exists
+    document = get_document_by_id(doc_id)
+    if not document:
+        raise HTTPException(status_code=404, detail="Document not found")
+    
+    latest_version = get_latest_document_version(doc_id)
+    if not latest_version:
+        raise HTTPException(status_code=404, detail="No versions found for this document")
+    
+    return latest_version
+
+
+@app.get("/api/documents/{doc_id}/versions/active", response_model=DocumentVersionList, tags=["Documents"])
+async def get_active_document_versions_endpoint(doc_id: str):
+    """Get all active (non-deprecated) versions of a document"""
+    # Verify document exists
+    document = get_document_by_id(doc_id)
+    if not document:
+        raise HTTPException(status_code=404, detail="Document not found")
+    
+    active_versions = get_active_document_versions(doc_id)
+    return DocumentVersionList(document_versions=active_versions)
 
 
 @app.get("/api/documents/{doc_id}/status", response_model=ProcessingStatus, tags=["Documents"])

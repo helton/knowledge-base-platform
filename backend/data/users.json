@@ -6,5 +6,13 @@
     "full_name": "Administrator",
     "created_at": "2025-06-22 17:24:20.504886",
     "updated_at": "2025-06-22 17:24:20.504901"
+  },
+  {
+    "id": "4d5fe323-67de-4853-ac68-3f8ef478a5cd",
+    "username": "admin",
+    "email": "admin@example.com",
+    "full_name": "Administrator",
+    "created_at": "2025-06-22 18:10:42.475265",
+    "updated_at": "2025-06-22 18:10:42.475268"
   }
 ]

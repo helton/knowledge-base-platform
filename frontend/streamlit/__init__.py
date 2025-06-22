@@ -1,1 +1,0 @@
-# Frontend package for RAG Knowledge Base Platform 

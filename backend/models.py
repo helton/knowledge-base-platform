@@ -128,7 +128,9 @@ class Document(BaseModel):
 class DocumentVersion(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     document_id: str
-    version_number: str
+    version_number: str  # e.g., "v1", "v2", "v3"
+    version_name: Optional[str] = None  # e.g., "Initial version", "Updated with new data"
+    change_description: Optional[str] = None  # Description of changes in this version
     status: DocumentStatus = DocumentStatus.PENDING
     processing_stage: Optional[ProcessingStage] = None
     processing_progress: float = 0.0
@@ -140,6 +142,14 @@ class DocumentVersion(BaseModel):
     embedding_model: Optional[EmbeddingModel] = None
     chunk_size: Optional[int] = None
     chunk_overlap: Optional[int] = None
+    file_path: Optional[str] = None  # Path to the versioned file
+    file_size: Optional[int] = None  # Size of the versioned file
+    mime_type: Optional[str] = None  # MIME type of the versioned file
+    is_deprecated: bool = False
+    deprecation_reason: Optional[str] = None  # Reason for deprecation
+    deprecated_at: Optional[datetime] = None
+    deprecated_by: Optional[str] = None  # User ID who deprecated this version
+    created_by: str
     created_at: datetime = Field(default_factory=datetime.now)
     updated_at: datetime = Field(default_factory=datetime.now)
 
@@ -230,4 +240,18 @@ class UploadDocumentRequest(BaseModel):
     embedding_provider: EmbeddingProvider
     embedding_model: EmbeddingModel
     chunk_size: int = 1000
-    chunk_overlap: int = 200 
+    chunk_overlap: int = 200
+
+
+class CreateDocumentVersionRequest(BaseModel):
+    version_name: Optional[str] = None  # e.g., "Updated with new data"
+    change_description: Optional[str] = None  # Description of changes
+    chunking_method: ChunkingMethod = ChunkingMethod.FIXED_SIZE
+    embedding_provider: EmbeddingProvider = EmbeddingProvider.OPENAI
+    embedding_model: EmbeddingModel = EmbeddingModel.TEXT_EMBEDDING_ADA_002
+    chunk_size: int = 1000
+    chunk_overlap: int = 200
+
+
+class DeprecateVersionRequest(BaseModel):
+    reason: str  # Required reason for deprecation 

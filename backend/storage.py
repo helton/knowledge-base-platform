@@ -7,14 +7,14 @@ import uuid
 
 from .models import (
     Project, KnowledgeBase, KnowledgeBaseVersion, Document, DocumentVersion,
-    User, ProjectUser, UserRole
+    User, ProjectUser, UserRole, DocumentStatus
 )
 
 
 class Storage:
     """Storage class that handles both memory and JSON file persistence"""
     
-    def __init__(self, data_dir: str = "data"):
+    def __init__(self, data_dir: str = "backend/data"):
         self.data_dir = Path(data_dir)
         self.data_dir.mkdir(exist_ok=True)
         
@@ -357,11 +357,62 @@ class Storage:
     def get_document_version_by_id(self, version_id: str) -> Optional[DocumentVersion]:
         return self._document_versions.get(version_id)
     
+    def get_latest_document_version(self, doc_id: str) -> Optional[DocumentVersion]:
+        """Get the latest (highest version number) document version"""
+        versions = self.get_document_versions_by_document(doc_id)
+        if not versions:
+            return None
+        
+        # Sort by version number (v1, v2, v3, etc.)
+        sorted_versions = sorted(versions, key=lambda v: int(v.version_number[1:]) if v.version_number.startswith('v') else 0)
+        return sorted_versions[-1]
+    
+    def get_next_version_number(self, doc_id: str) -> str:
+        """Generate the next version number for a document (v1, v2, v3, etc.)"""
+        versions = self.get_document_versions_by_document(doc_id)
+        if not versions:
+            return "v1"
+        
+        # Find the highest version number
+        max_version = 0
+        for version in versions:
+            if version.version_number.startswith('v'):
+                try:
+                    version_num = int(version.version_number[1:])
+                    max_version = max(max_version, version_num)
+                except ValueError:
+                    continue
+        
+        return f"v{max_version + 1}"
+    
     def create_document_version(self, version_data: dict) -> DocumentVersion:
         version = DocumentVersion(**version_data)
         self._document_versions[version.id] = version
         self._save_all()
         return version
+    
+    def deprecate_document_version(self, version_id: str, reason: str, deprecated_by: str) -> bool:
+        """Deprecate a document version with a reason"""
+        version = self.get_document_version_by_id(version_id)
+        if not version:
+            return False
+        
+        version.is_deprecated = True
+        version.deprecation_reason = reason
+        version.deprecated_at = datetime.now()
+        version.deprecated_by = deprecated_by
+        version.status = DocumentStatus.DEPRECATED
+        version.updated_at = datetime.now()
+        
+        self._save_all()
+        return True
+    
+    def get_active_document_versions(self, doc_id: str) -> List[DocumentVersion]:
+        """Get all non-deprecated document versions"""
+        return [
+            version for version in self.get_document_versions_by_document(doc_id)
+            if not version.is_deprecated
+        ]
 
 
 # Global storage instance

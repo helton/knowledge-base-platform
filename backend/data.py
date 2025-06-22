@@ -61,6 +61,15 @@ def get_document_versions_by_document(doc_id: str) -> List[DocumentVersion]:
 def get_document_version_by_id(version_id: str) -> Optional[DocumentVersion]:
     return storage.get_document_version_by_id(version_id)
 
+def get_latest_document_version(doc_id: str) -> Optional[DocumentVersion]:
+    return storage.get_latest_document_version(doc_id)
+
+def get_next_version_number(doc_id: str) -> str:
+    return storage.get_next_version_number(doc_id)
+
+def get_active_document_versions(doc_id: str) -> List[DocumentVersion]:
+    return storage.get_active_document_versions(doc_id)
+
 # Create functions
 def create_knowledge_base(project_id: str, name: str, description: str, access_level: AccessLevel, created_by: str) -> KnowledgeBase:
     import uuid
@@ -129,6 +138,41 @@ def create_document(knowledge_base_id: str, name: str, description: str, file_pa
     
     return storage.create_document(doc_data)
 
+def create_document_version(doc_id: str, version_data: dict, created_by: str) -> DocumentVersion:
+    """Create a new version of an existing document"""
+    import uuid
+    from datetime import datetime
+    
+    # Get the next version number
+    next_version = storage.get_next_version_number(doc_id)
+    
+    version_info = {
+        "id": str(uuid.uuid4()),
+        "document_id": doc_id,
+        "version_number": next_version,
+        "version_name": version_data.get("version_name"),
+        "change_description": version_data.get("change_description"),
+        "status": DocumentStatus.PENDING,
+        "processing_stage": ProcessingStage.DOWNLOAD,
+        "processing_progress": 0.0,
+        "chunk_count": 0,
+        "embedding_count": 0,
+        "chunking_method": version_data.get("chunking_method", ChunkingMethod.FIXED_SIZE),
+        "embedding_provider": version_data.get("embedding_provider", EmbeddingProvider.OPENAI),
+        "embedding_model": version_data.get("embedding_model", EmbeddingModel.TEXT_EMBEDDING_ADA_002),
+        "chunk_size": version_data.get("chunk_size", 1000),
+        "chunk_overlap": version_data.get("chunk_overlap", 200),
+        "file_path": version_data.get("file_path"),
+        "file_size": version_data.get("file_size"),
+        "mime_type": version_data.get("mime_type"),
+        "is_deprecated": False,
+        "created_by": created_by,
+        "created_at": datetime.now(),
+        "updated_at": datetime.now()
+    }
+    
+    return storage.create_document_version(version_info)
+
 # Deprecate functions
 def deprecate_knowledge_base_version(version_id: str) -> bool:
     version = storage.get_version_by_id(version_id)
@@ -152,6 +196,10 @@ def deprecate_document_version(version_id: str) -> bool:
         return True
     return False
 
+def deprecate_document_version_with_reason(version_id: str, reason: str, deprecated_by: str) -> bool:
+    """Deprecate a document version with a reason"""
+    return storage.deprecate_document_version(version_id, reason, deprecated_by)
+
 # Set primary knowledge base
 def set_primary_knowledge_base(kb_id: str) -> bool:
     kb = storage.get_knowledge_base_by_id(kb_id)
@@ -169,7 +217,7 @@ def set_primary_knowledge_base(kb_id: str) -> bool:
     return True
 
 # Document processing (simplified for now)
-async def process_document(document_id: str, processing_config: dict) -> DocumentVersion:
+async def process_document(document_id: str, processing_config: dict, created_by: str) -> DocumentVersion:
     """Process a document (simplified version)"""
     import uuid
     from datetime import datetime
@@ -205,24 +253,42 @@ async def process_document(document_id: str, processing_config: dict) -> Documen
     doc.updated_at = datetime.now()
     storage._documents[document_id] = doc
     
-    # Create document version
-    version_data = {
-        "id": str(uuid.uuid4()),
-        "document_id": document_id,
-        "version_number": "v1.0.0",
-        "status": DocumentStatus.COMPLETED,
-        "processing_stage": ProcessingStage.EMBED,
-        "processing_progress": 1.0,
-        "chunk_count": 25,
-        "embedding_count": 25,
-        "chunking_method": processing_config.get("chunking_method", ChunkingMethod.FIXED_SIZE),
-        "embedding_provider": processing_config.get("embedding_provider", EmbeddingProvider.OPENAI),
-        "embedding_model": processing_config.get("embedding_model", EmbeddingModel.TEXT_EMBEDDING_ADA_002),
-        "chunk_size": processing_config.get("chunk_size", 1000),
-        "chunk_overlap": processing_config.get("chunk_overlap", 200),
-        "created_at": datetime.now(),
-        "updated_at": datetime.now()
-    }
-    
-    version = storage.create_document_version(version_data)
-    return version 
+    # Find the latest version and update it instead of creating a new one
+    latest_version = storage.get_latest_document_version(document_id)
+    if latest_version:
+        # Update the existing version with processing results
+        latest_version.status = DocumentStatus.COMPLETED
+        latest_version.processing_stage = ProcessingStage.EMBED
+        latest_version.processing_progress = 1.0
+        latest_version.chunk_count = 25
+        latest_version.embedding_count = 25
+        latest_version.updated_at = datetime.now()
+        
+        # Update in storage
+        storage._document_versions[latest_version.id] = latest_version
+        storage._save_all()
+        
+        return latest_version
+    else:
+        # Fallback: create a version if none exists (shouldn't happen)
+        version_data = {
+            "id": str(uuid.uuid4()),
+            "document_id": document_id,
+            "version_number": "v1",
+            "status": DocumentStatus.COMPLETED,
+            "processing_stage": ProcessingStage.EMBED,
+            "processing_progress": 1.0,
+            "chunk_count": 25,
+            "embedding_count": 25,
+            "chunking_method": processing_config.get("chunking_method", ChunkingMethod.FIXED_SIZE),
+            "embedding_provider": processing_config.get("embedding_provider", EmbeddingProvider.OPENAI),
+            "embedding_model": processing_config.get("embedding_model", EmbeddingModel.TEXT_EMBEDDING_ADA_002),
+            "chunk_size": processing_config.get("chunk_size", 1000),
+            "chunk_overlap": processing_config.get("chunk_overlap", 200),
+            "created_by": created_by,
+            "created_at": datetime.now(),
+            "updated_at": datetime.now()
+        }
+        
+        version = storage.create_document_version(version_data)
+        return version 

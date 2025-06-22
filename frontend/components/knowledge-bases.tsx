@@ -5,7 +5,7 @@ import { apiClient, KnowledgeBase } from '@/lib/api-client'
 
 interface KnowledgeBasesProps {
   projectId: string
-  onKbSelect: (kbId: string) => void
+  onKbSelect: (kb: KnowledgeBase) => void
 }
 
 export function KnowledgeBases({ projectId, onKbSelect }: KnowledgeBasesProps) {
@@ -52,28 +52,40 @@ export function KnowledgeBases({ projectId, onKbSelect }: KnowledgeBasesProps) {
       setNewKbDescription('')
       setNewKbAccessLevel('private')
       setShowCreateForm(false)
-      onKbSelect(newKb.id)
+      onKbSelect(newKb)
     } catch (error) {
       console.error('Failed to create knowledge base:', error)
       alert('Failed to create knowledge base. Please try again.')
     }
   }
 
+  const handleSelectKb = (kb: KnowledgeBase) => {
+    onKbSelect(kb)
+  }
+
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'active': return 'bg-green-100 text-green-800'
-      case 'inactive': return 'bg-gray-100 text-gray-800'
-      case 'archived': return 'bg-yellow-100 text-yellow-800'
-      default: return 'bg-gray-100 text-gray-800'
+      case 'active':
+        return 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300'
+      case 'inactive':
+        return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
+      case 'archived':
+        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300'
+      default:
+        return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
     }
   }
 
   const getAccessLevelColor = (accessLevel: string) => {
     switch (accessLevel) {
-      case 'private': return 'bg-red-100 text-red-800'
-      case 'protected': return 'bg-yellow-100 text-yellow-800'
-      case 'public': return 'bg-green-100 text-green-800'
-      default: return 'bg-gray-100 text-gray-800'
+      case 'private':
+        return 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300'
+      case 'protected':
+        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300'
+      case 'public':
+        return 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300'
+      default:
+        return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
     }
   }
 
@@ -116,10 +128,10 @@ export function KnowledgeBases({ projectId, onKbSelect }: KnowledgeBasesProps) {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">📚 Knowledge Bases</h2>
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">📚 Knowledge Bases</h2>
         <button
           onClick={() => setShowCreateForm(true)}
-          className="px-4 py-2 bg-gray-900 text-white rounded-md hover:bg-gray-800 transition-colors flex items-center space-x-2"
+          className="px-4 py-2 bg-black dark:bg-white text-white dark:text-black rounded-md hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors flex items-center space-x-2"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -129,11 +141,11 @@ export function KnowledgeBases({ projectId, onKbSelect }: KnowledgeBasesProps) {
       </div>
 
       {showCreateForm && (
-        <div className="bg-white border border-gray-200 rounded-lg p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Create New Knowledge Base</h3>
+        <div className="bg-white dark:bg-openai-dark-light border border-gray-200 dark:border-gray-700 rounded-lg p-6">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Create New Knowledge Base</h3>
           <div className="space-y-4">
             <div>
-              <label htmlFor="kb-name" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="kb-name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Name *
               </label>
               <input
@@ -146,7 +158,7 @@ export function KnowledgeBases({ projectId, onKbSelect }: KnowledgeBasesProps) {
               />
             </div>
             <div>
-              <label htmlFor="kb-description" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="kb-description" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Description
               </label>
               <textarea
@@ -159,7 +171,7 @@ export function KnowledgeBases({ projectId, onKbSelect }: KnowledgeBasesProps) {
               />
             </div>
             <div>
-              <label htmlFor="kb-access" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="kb-access" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Access Level
               </label>
               <select
@@ -198,19 +210,19 @@ export function KnowledgeBases({ projectId, onKbSelect }: KnowledgeBasesProps) {
       )}
 
       {knowledgeBases.length === 0 ? (
-        <div className="bg-white border border-gray-200 rounded-lg p-8 text-center">
-          <div className="mx-auto h-12 w-12 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-            <svg className="h-6 w-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <div className="bg-white dark:bg-openai-dark-light border border-gray-200 dark:border-gray-700 rounded-lg p-8 text-center">
+          <div className="mx-auto h-12 w-12 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-4">
+            <svg className="h-6 w-6 text-gray-600 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
             </svg>
           </div>
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No Knowledge Bases</h3>
-          <p className="text-gray-600 mb-4">
+          <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">No Knowledge Bases</h3>
+          <p className="text-gray-600 dark:text-gray-400 mb-4">
             Get started by creating your first knowledge base to organize your documents and data.
           </p>
           <button
             onClick={() => setShowCreateForm(true)}
-            className="px-4 py-2 bg-gray-900 text-white rounded-md hover:bg-gray-800 transition-colors"
+            className="px-4 py-2 bg-black dark:bg-white text-white dark:text-black rounded-md hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors"
           >
             Create Knowledge Base
           </button>
@@ -220,11 +232,11 @@ export function KnowledgeBases({ projectId, onKbSelect }: KnowledgeBasesProps) {
           {knowledgeBases.map((kb) => (
             <div
               key={kb.id}
-              onClick={() => onKbSelect(kb.id)}
-              className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow cursor-pointer"
+              onClick={() => handleSelectKb(kb)}
+              className="bg-white dark:bg-openai-dark-light border border-gray-200 dark:border-gray-700 rounded-lg p-6 hover:shadow-md transition-shadow cursor-pointer"
             >
               <div className="flex items-start justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900 truncate">{kb.name}</h3>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 truncate">{kb.name}</h3>
                 <div className="flex space-x-2">
                   <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(kb.status)}`}>
                     {kb.status}
@@ -236,10 +248,10 @@ export function KnowledgeBases({ projectId, onKbSelect }: KnowledgeBasesProps) {
               </div>
               
               {kb.description && (
-                <p className="text-gray-600 text-sm mb-4 line-clamp-2">{kb.description}</p>
+                <p className="text-gray-600 dark:text-gray-400 text-sm mb-4 line-clamp-2">{kb.description}</p>
               )}
               
-              <div className="flex items-center justify-between text-xs text-gray-500">
+              <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
                 <span>Created: {new Date(kb.created_at).toLocaleDateString()}</span>
                 <span>Updated: {new Date(kb.updated_at).toLocaleDateString()}</span>
               </div>

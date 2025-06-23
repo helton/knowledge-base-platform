@@ -3,11 +3,10 @@
 import { apiClient, KnowledgeBase } from '@/lib/api-client'
 import { Dispatch, SetStateAction } from 'react'
 
-type ActiveView = 'kbs' | 'documents' | 'settings' | 'create_kb' | 'document_versions'
+type ActiveView = 'kbs' | 'documents' | 'settings' | 'create_kb' | 'document_versions' | 'kb_versions'
 
 interface SidebarProps {
   projectId: string | null
-  onSelectKb: (kb: KnowledgeBase) => void
   onSelectView: Dispatch<SetStateAction<ActiveView>>
 }
 

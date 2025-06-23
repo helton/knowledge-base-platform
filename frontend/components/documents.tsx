@@ -24,14 +24,17 @@ type DocumentWithVersionInfo = Document & {
   version_count?: number
   latest_version_number?: number
   versions?: DocumentVersion[]
+  active_versions_count?: number
+  archived_versions_count?: number
 }
 
 interface DocumentsProps {
   selectedKb: { id: string; name: string } | null
   onDocumentSelect: (document: Document) => void
+  onViewVersions?: () => void
 }
 
-export function Documents({ selectedKb, onDocumentSelect }: DocumentsProps) {
+export function Documents({ selectedKb, onDocumentSelect, onViewVersions }: DocumentsProps) {
   const [documents, setDocuments] = useState<DocumentWithVersionInfo[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -67,7 +70,9 @@ export function Documents({ selectedKb, onDocumentSelect }: DocumentsProps) {
       const docsWithVersionInfo: DocumentWithVersionInfo[] = await Promise.all(
         docs.map(async (doc) => {
           const versions = await apiClient.getDocumentVersions(doc.id)
-          const versionNumbers = versions.map(
+          const versionNumbers = versions
+            .filter(v => !v.is_archived)
+            .map(
             (v) => parseInt(v.version_number.replace('v', ''), 10) || 0
           )
           return {
@@ -75,6 +80,8 @@ export function Documents({ selectedKb, onDocumentSelect }: DocumentsProps) {
             versions,
             version_count: versions.length,
             latest_version_number: versions.length > 0 ? Math.max(...versionNumbers) : 0,
+            active_versions_count: versions.filter(v => !v.is_archived).length,
+            archived_versions_count: versions.filter(v => v.is_archived).length,
           }
         })
       )
@@ -224,12 +231,19 @@ export function Documents({ selectedKb, onDocumentSelect }: DocumentsProps) {
     <div className="p-4 h-full flex flex-col">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-semibold">
-          Documents for <span className="text-blue-500">{selectedKb.name}</span>
+          Documents for <span className="text-gray-700 dark:text-gray-300">{selectedKb.name}</span>
         </h2>
-        <button onClick={() => setShowAddDocModal(true)} className="btn btn-primary">
-          <Plus className="mr-2 h-4 w-4" />
-          Add Document
-        </button>
+        <div className="flex gap-2">
+          {onViewVersions && (
+            <button onClick={onViewVersions} className="btn btn-secondary">
+              View KB Versions
+            </button>
+          )}
+          <button onClick={() => setShowAddDocModal(true)} className="btn btn-primary">
+            <Plus className="mr-2 h-4 w-4" />
+            Add Document
+          </button>
+        </div>
       </div>
 
       {!isLoading && documents.length === 0 ? (
@@ -292,7 +306,8 @@ export function Documents({ selectedKb, onDocumentSelect }: DocumentsProps) {
               </div>
               {doc.description && <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">{doc.description}</p>}
               <div className="mt-2 text-sm text-gray-500 dark:text-gray-400 flex items-center space-x-4">
-                <span>{doc.version_count} version{doc.version_count === 1 ? '' : 's'}</span>
+                <span>{doc.active_versions_count} active version{doc.active_versions_count === 1 ? '' : 's'}</span>
+                <span>{doc.archived_versions_count} archived version{doc.archived_versions_count === 1 ? '' : 's'}</span>
                 {doc.latest_version_number && doc.latest_version_number > 0 ? (
                   <span>Latest: v{doc.latest_version_number}</span>
                 ) : null}

@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Literal
 from datetime import datetime
 from enum import Enum
 import uuid
@@ -27,6 +27,12 @@ class VersionStatus(str, Enum):
     DRAFT = "draft"
     PUBLISHED = "published"
     ARCHIVED = "archived"
+
+
+class VersionBump(str, Enum):
+    MAJOR = "major"
+    MINOR = "minor"
+    PATCH = "patch"
 
 
 class DocumentStatus(str, Enum):
@@ -118,6 +124,7 @@ class Document(BaseModel):
     created_by: str
     created_at: datetime
     updated_at: datetime
+    knowledge_base_id: str
     # Frontend-only fields for enrichment
     version_count: Optional[int] = None
     latest_version_number: Optional[int] = None
@@ -158,10 +165,6 @@ class KnowledgeBase(BaseModel):
     name: str
     description: Optional[str] = None
     project_id: str
-    status: KnowledgeBaseStatus = KnowledgeBaseStatus.ARCHIVED
-    access_level: AccessLevel = AccessLevel.PRIVATE
-    is_primary: bool = False
-    current_version: Optional[str] = None
     created_by: str
     created_at: datetime = Field(default_factory=datetime.now)
     updated_at: datetime = Field(default_factory=datetime.now)
@@ -170,20 +173,20 @@ class KnowledgeBase(BaseModel):
 class KnowledgeBaseVersion(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     knowledge_base_id: str
-    version_number: str
-    description: Optional[str] = None
-    status: VersionStatus = VersionStatus.ARCHIVED
-    chunking_method: ChunkingMethod
-    embedding_provider: EmbeddingProvider
-    embedding_model: EmbeddingModel
-    chunk_size: int
-    chunk_overlap: int
-    document_versions: List[str] = Field(default_factory=list)  # Document version IDs
-    total_chunks: int = 0
-    total_embeddings: int = 0
+    version_number: str  # Semantic versioning, e.g., "1.0.0"
+    version_name: Optional[str] = None
+    release_notes: Optional[str] = None
+    status: Literal["draft", "published", "archived"]
+    access_level: Literal["private", "protected", "public"]
+    is_primary: bool = False
+    document_version_ids: List[str] = Field(default_factory=list)  # List of DocumentVersion IDs
     created_by: str
     created_at: datetime = Field(default_factory=datetime.now)
-    updated_at: datetime = Field(default_factory=datetime.now)
+    updated_at: Optional[datetime] = None
+    published_by: Optional[str] = None
+    published_at: Optional[datetime] = None
+    archived_by: Optional[str] = None
+    archived_at: Optional[datetime] = None
 
 
 # Response models
@@ -218,18 +221,19 @@ class ProcessingStatus(BaseModel):
 class CreateKnowledgeBaseRequest(BaseModel):
     name: str
     description: Optional[str] = None
-    access_level: AccessLevel = AccessLevel.PRIVATE
 
 
-class CreateVersionRequest(BaseModel):
-    version_number: str
+class CreateProjectRequest(BaseModel):
+    name: str
     description: Optional[str] = None
-    chunking_method: ChunkingMethod
-    embedding_provider: EmbeddingProvider
-    embedding_model: EmbeddingModel
-    chunk_size: int = 1000
-    chunk_overlap: int = 200
-    document_version_ids: List[str] = Field(default_factory=list)
+    
+
+class CreateKbVersionRequest(BaseModel):
+    version_bump: Literal["major", "minor", "patch"]
+    version_name: Optional[str] = None
+    release_notes: Optional[str] = None
+    document_version_ids: List[str] = []
+    access_level: Literal["private", "protected", "public"] = "private"
 
 
 class UploadDocumentRequest(BaseModel):
@@ -286,14 +290,14 @@ class DocumentOut(DocumentBase):
     processing_progress: int | None = None
     version_count: int = 0
     latest_version_number: int | None = None
-    
+
     class Config:
         from_attributes = True
 
 
 class DocumentVersionBase(BaseModel):
     change_description: str | None = None
-    
+
 
 class DocumentVersionOut(DocumentVersionBase):
     id: str

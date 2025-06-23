@@ -1,273 +1,183 @@
-from datetime import datetime, timedelta
-from typing import List, Dict, Optional
-import asyncio
-import random
-import time
 from .models import (
-    Project, KnowledgeBase, KnowledgeBaseVersion, Document, DocumentVersion,
-    ProjectUser, User, ProjectStatus, KnowledgeBaseStatus, VersionStatus, 
-    DocumentStatus, ProcessingStage, ChunkingMethod, EmbeddingProvider, 
-    EmbeddingModel, AccessLevel, UserRole
+    Project, KnowledgeBase, KnowledgeBaseVersion, Document, DocumentVersion, 
+    User, VersionStatus, DocumentStatus, AccessLevel
 )
 from .storage import storage
+from datetime import datetime
+from typing import List, Optional
+import uuid
 
+# Helper function to get the current user (mocked for now)
+def _get_current_user_id() -> str:
+    users = storage.get_all_users()
+    return users[0].id if users else "system"
 
-# User functions
-def get_all_users() -> List[User]:
-    return storage.get_all_users()
-
-def get_user_by_id(user_id: str) -> Optional[User]:
-    return storage.get_user_by_id(user_id)
-
-# Project functions
+# Project data functions
 def get_all_projects() -> List[Project]:
     return storage.get_all_projects()
 
 def get_project_by_id(project_id: str) -> Optional[Project]:
     return storage.get_project_by_id(project_id)
 
-# Knowledge Base functions
+def create_project(name: str, description: str, created_by: str) -> Project:
+    project = Project(name=name, description=description, created_by=created_by)
+    storage.add_project(project)
+    return project
+
+# Knowledge Base data functions
 def get_knowledge_bases_by_project(project_id: str) -> List[KnowledgeBase]:
     return storage.get_knowledge_bases_by_project(project_id)
 
 def get_knowledge_base_by_id(kb_id: str) -> Optional[KnowledgeBase]:
     return storage.get_knowledge_base_by_id(kb_id)
 
+def create_knowledge_base(project_id: str, name: str, description: str, created_by: str) -> KnowledgeBase:
+    kb = KnowledgeBase(project_id=project_id, name=name, description=description, created_by=created_by)
+    storage.add_knowledge_base(kb)
+    return kb
+
+# Knowledge Base Version data functions
 def get_versions_by_knowledge_base(kb_id: str) -> List[KnowledgeBaseVersion]:
-    return storage.get_versions_by_knowledge_base(kb_id)
+    return storage.get_versions_by_kb(kb_id)
 
 def get_version_by_id(version_id: str) -> Optional[KnowledgeBaseVersion]:
     return storage.get_version_by_id(version_id)
 
-# Document functions
-def get_documents_by_project(project_id: str) -> List[Document]:
-    # Get all knowledge bases for the project, then get documents for each
-    knowledge_bases = storage.get_knowledge_bases_by_project(project_id)
-    documents = []
-    for kb in knowledge_bases:
-        kb_documents = storage.get_documents_by_kb(kb.id)
-        documents.extend(kb_documents)
-    return documents
+def create_knowledge_base_version(kb_id: str, version_data: dict, user_id: str) -> KnowledgeBaseVersion:
+    version = KnowledgeBaseVersion(knowledge_base_id=kb_id, created_by=user_id, **version_data)
+    storage.add_kb_version(version)
+    return version
 
+def publish_kb_version(version_id: str, user_id: str) -> Optional[KnowledgeBaseVersion]:
+    version = storage.get_version_by_id(version_id)
+    if version and version.status == VersionStatus.DRAFT:
+        version.status = VersionStatus.PUBLISHED
+        version.published_at = datetime.now()
+        version.published_by = user_id
+        storage.update_kb_version(version)
+        return version
+    return None
+
+def archive_knowledge_base_version(version_id: str) -> bool:
+    version = storage.get_version_by_id(version_id)
+    user_id = _get_current_user_id()
+    if version and version.status != VersionStatus.ARCHIVED:
+        version.status = VersionStatus.ARCHIVED
+        version.is_primary = False
+        version.archived_at = datetime.now()
+        version.archived_by = user_id
+        storage.update_kb_version(version)
+        return True
+    return False
+
+def set_primary_knowledge_base_version(version_id: str) -> bool:
+    version_to_set = storage.get_version_by_id(version_id)
+    if not version_to_set or version_to_set.status != VersionStatus.PUBLISHED:
+        return False
+
+    all_versions = storage.get_versions_by_kb(version_to_set.knowledge_base_id)
+    for version in all_versions:
+        if version.is_primary and version.id != version_id:
+            version.is_primary = False
+            storage.update_kb_version(version)
+
+    version_to_set.is_primary = True
+    storage.update_kb_version(version_to_set)
+    return True
+
+def get_primary_kb_version(kb_id: str) -> Optional[KnowledgeBaseVersion]:
+    versions = storage.get_versions_by_kb(kb_id)
+    for version in versions:
+        if version.is_primary:
+            return version
+    return None
+
+# Document data functions
 def get_documents_by_kb(kb_id: str) -> List[Document]:
     return storage.get_documents_by_kb(kb_id)
+
+def get_documents_by_project(project_id: str) -> List[Document]:
+    return storage.get_documents_by_project(project_id)
 
 def get_document_by_id(doc_id: str) -> Optional[Document]:
     return storage.get_document_by_id(doc_id)
 
+def create_document(kb_id: str, name: str, description: str, created_by: str) -> Document:
+    doc = Document(
+        id=str(uuid.uuid4()),
+        knowledge_base_id=kb_id,
+        name=name,
+        description=description,
+        status=DocumentStatus.PENDING,
+        created_by=created_by,
+        created_at=datetime.now(),
+        updated_at=datetime.now()
+    )
+    storage.add_document(doc)
+    return doc
+
+# Document Version data functions
 def get_document_versions_by_document(doc_id: str) -> List[DocumentVersion]:
-    return storage.get_document_versions(doc_id)
+    return storage.get_document_versions_by_document(doc_id)
 
 def get_document_version_by_id(version_id: str) -> Optional[DocumentVersion]:
     return storage.get_document_version_by_id(version_id)
 
 def get_latest_document_version(doc_id: str) -> Optional[DocumentVersion]:
-    return storage.get_latest_document_version(doc_id)
-
-def get_next_version_number(doc_id: str) -> str:
-    return storage.get_next_version_number(doc_id)
+    versions = get_active_document_versions(doc_id)
+    if not versions:
+        return None
+    return max(versions, key=lambda v: v.created_at)
 
 def get_active_document_versions(doc_id: str) -> List[DocumentVersion]:
-    return storage.get_active_document_versions(doc_id)
-
-# Create functions
-def create_knowledge_base(project_id: str, name: str, description: str, access_level: AccessLevel, created_by: str) -> KnowledgeBase:
-    import uuid
-    from datetime import datetime
-    
-    kb_data = {
-        "id": str(uuid.uuid4()),
-        "name": name,
-        "description": description,
-        "project_id": project_id,
-        "status": KnowledgeBaseStatus.ACTIVE,
-        "access_level": access_level,
-        "is_primary": False,
-        "current_version": None,
-        "created_by": created_by,
-        "created_at": datetime.now(),
-        "updated_at": datetime.now()
-    }
-    
-    return storage.create_knowledge_base(kb_data)
-
-def create_knowledge_base_version(kb_id: str, version_data: dict, created_by: str) -> KnowledgeBaseVersion:
-    import uuid
-    from datetime import datetime
-    
-    version_info = {
-        "id": str(uuid.uuid4()),
-        "knowledge_base_id": kb_id,
-        "version_number": version_data.get("version_number", "v1.0.0"),
-        "description": version_data.get("description", ""),
-        "status": VersionStatus.DRAFT,
-        "chunking_method": version_data.get("chunking_method", ChunkingMethod.FIXED_SIZE),
-        "embedding_provider": version_data.get("embedding_provider", EmbeddingProvider.OPENAI),
-        "embedding_model": version_data.get("embedding_model", EmbeddingModel.TEXT_EMBEDDING_ADA_002),
-        "chunk_size": version_data.get("chunk_size", 1000),
-        "chunk_overlap": version_data.get("chunk_overlap", 200),
-        "document_versions": version_data.get("document_versions", []),
-        "created_by": created_by,
-        "created_at": datetime.now(),
-        "updated_at": datetime.now()
-    }
-    
-    return storage.create_kb_version(version_info)
-
-def create_document(
-    knowledge_base_id: str, 
-    name: str, 
-    description: str, 
-    created_by: str,
-    source_url: Optional[str] = None
-) -> Document:
-    import uuid
-    from datetime import datetime
-    
-    doc_data = {
-        "id": str(uuid.uuid4()),
-        "name": name,
-        "description": description,
-        "source_url": source_url,
-        "knowledge_base_id": knowledge_base_id,
-        "status": DocumentStatus.PENDING,
-        "processing_stage": ProcessingStage.DOWNLOAD,
-        "processing_progress": 0.0,
-        "created_by": created_by,
-        "created_at": datetime.now(),
-        "updated_at": datetime.now()
-    }
-    
-    return storage.create_document(doc_data)
+    versions = storage.get_document_versions_by_document(doc_id)
+    return [v for v in versions if not v.is_archived]
 
 def create_document_version(doc_id: str, version_data: dict, created_by: str) -> DocumentVersion:
-    """Create a new version of an existing document"""
-    import uuid
-    from datetime import datetime
-    
-    # Get the next version number
-    next_version = storage.get_next_version_number(doc_id)
-    
-    version_info = {
-        "id": str(uuid.uuid4()),
-        "document_id": doc_id,
-        "version_number": next_version,
-        "version_name": version_data.get("version_name"),
-        "change_description": version_data.get("change_description"),
-        "status": DocumentStatus.PENDING,
-        "processing_stage": ProcessingStage.DOWNLOAD,
-        "processing_progress": 0.0,
-        "chunk_count": 0,
-        "embedding_count": 0,
-        "chunking_method": version_data.get("chunking_method", ChunkingMethod.FIXED_SIZE),
-        "embedding_provider": version_data.get("embedding_provider", EmbeddingProvider.OPENAI),
-        "embedding_model": version_data.get("embedding_model", EmbeddingModel.TEXT_EMBEDDING_ADA_002),
-        "chunk_size": version_data.get("chunk_size", 1000),
-        "chunk_overlap": version_data.get("chunk_overlap", 200),
-        "file_path": version_data.get("file_path"),
-        "file_size": version_data.get("file_size"),
-        "mime_type": version_data.get("mime_type"),
-        "source_url": version_data.get("source_url"),
-        "is_archived": False,
-        "created_by": created_by,
-        "created_at": datetime.now(),
-        "updated_at": datetime.now()
-    }
-    
-    return storage.create_document_version(version_info)
+    version = DocumentVersion(document_id=doc_id, created_by=created_by, **version_data)
+    storage.add_document_version(version)
+    return version
 
-# Archive functions
-def archive_knowledge_base_version(version_id: str) -> bool:
-    version = storage.get_version_by_id(version_id)
-    if version:
-        version.status = VersionStatus.ARCHIVED
-        version.updated_at = datetime.now()
-        # Update in storage
-        storage._kb_versions[version_id] = version
-        storage._save_all()
-        return True
-    return False
-
-def archive_document_version(version_id: str) -> bool:
+def archive_document_version_with_reason(version_id: str, reason: str) -> bool:
     version = storage.get_document_version_by_id(version_id)
-    if version:
-        version.status = DocumentStatus.ARCHIVED
-        version.updated_at = datetime.now()
-        # Update in storage
-        storage._document_versions[version_id] = version
-        storage._save_all()
+    user_id = _get_current_user_id()
+    if version and not version.is_archived:
+        version.is_archived = True
+        version.archive_reason = reason
+        version.archived_at = datetime.now()
+        version.archived_by = user_id
+        storage.update_document_version(version)
         return True
     return False
 
-def archive_document_version_with_reason(version_id: str, reason: str, archived_by: str) -> bool:
-    """Archive a document version with a reason"""
-    return storage.archive_document_version(version_id, reason, archived_by)
+# User data functions
+def get_all_users() -> List[User]:
+    return storage.get_all_users()
 
-# Set primary knowledge base
-def set_primary_knowledge_base(kb_id: str) -> bool:
-    kb = storage.get_knowledge_base_by_id(kb_id)
-    if not kb:
-        return False
+# Processing functions
+def process_document(doc_id: str, version_id: str):
+    from time import sleep
+    from .models import ProcessingStage
     
-    # Set all other KBs in the same project as non-primary
-    project_kbs = storage.get_knowledge_bases_by_project(kb.project_id)
-    for project_kb in project_kbs:
-        project_kb.is_primary = (project_kb.id == kb_id)
-        project_kb.updated_at = datetime.now()
-        storage._knowledge_bases[project_kb.id] = project_kb
-    
-    storage._save_all()
-    return True
+    version = storage.get_document_version_by_id(version_id)
+    if not version:
+        return
 
-# Document processing (simplified for now)
-async def process_document(document_id: str, processing_config: dict, created_by: str) -> DocumentVersion:
-    """Process a document (simplified version)"""
-    import uuid
-    from datetime import datetime
-    
-    doc = storage.get_document_by_id(document_id)
-    if not doc:
-        raise ValueError("Document not found")
-    
-    # Update document status to processing
-    doc.status = DocumentStatus.PROCESSING
-    doc.processing_stage = ProcessingStage.EXTRACT
-    doc.processing_progress = 0.1
-    doc.updated_at = datetime.now()
-    storage._documents[document_id] = doc
-    
-    # Simulate processing
-    await asyncio.sleep(2)
-    
-    # Update progress
-    doc.processing_stage = ProcessingStage.CHUNK
-    doc.processing_progress = 0.5
-    doc.updated_at = datetime.now()
-    storage._documents[document_id] = doc
-    
-    await asyncio.sleep(2)
-    
-    # Complete processing for the document
-    doc.status = DocumentStatus.COMPLETED
-    doc.processing_stage = ProcessingStage.EMBED
-    doc.processing_progress = 1.0
-    doc.updated_at = datetime.now()
-    storage._documents[document_id] = doc
-    
-    # Find the latest version and update it with processing results
-    latest_version = storage.get_latest_document_version(document_id)
-    if latest_version:
-        latest_version.status = DocumentStatus.COMPLETED
-        latest_version.processing_stage = ProcessingStage.EMBED
-        latest_version.processing_progress = 1.0
-        latest_version.chunk_count = 25 # Simulated
-        latest_version.embedding_count = 25 # Simulated
-        latest_version.updated_at = datetime.now()
-        
-        storage._document_versions[latest_version.id] = latest_version
-        storage._save_all()
-        
-        return latest_version
-    else:
-        # This case should ideally not be reached if versions are created properly
-        raise ValueError(f"No version found for document {document_id} to process.") 
+    stages = [
+        (ProcessingStage.DOWNLOAD, 25),
+        (ProcessingStage.EXTRACT, 50),
+        (ProcessingStage.CLEAN, 75),
+        (ProcessingStage.CHUNK, 90),
+        (ProcessingStage.EMBED, 100)
+    ]
+
+    version.status = DocumentStatus.PROCESSING
+    for stage, progress in stages:
+        version.processing_stage = stage
+        version.processing_progress = progress
+        storage.update_document_version(version)
+        sleep(2)
+
+    version.status = DocumentStatus.COMPLETED
+    version.chunk_count = 150
+    storage.update_document_version(version) 

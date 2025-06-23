@@ -183,7 +183,17 @@ export function DocumentVersions({ document, onVersionSelect, onBack }: Document
 
                   {version.change_description && (<p className="text-sm text-gray-600 dark:text-gray-400 mb-2">{version.change_description}</p>)}
                   <div className="flex items-center space-x-4 text-xs text-gray-500 dark:text-gray-400 mb-3">
-                    <span className="flex items-center space-x-1.5">{version.source_url ? <Globe className="w-4 h-4" /> : <UploadCloud className="w-4 h-4" />}<span>{version.source_url ? 'URL' : 'Upload'}</span></span>
+                    <span className="flex items-center space-x-1.5">
+                      {version.source_url ? <Globe className="w-4 h-4" /> : <UploadCloud className="w-4 h-4" />}<span>{version.source_url ? 'URL' : 'Upload'}</span>
+                    </span>
+                    {/* Show file name if present and not a URL version */}
+                    {!version.source_url && version.file_name && (
+                      <span className="truncate max-w-xs" title={version.file_name}>File: {version.file_name}</span>
+                    )}
+                    {/* Show source_url if present */}
+                    {version.source_url && (
+                      <span className="truncate max-w-xs" title={version.source_url}>URL: {version.source_url}</span>
+                    )}
                     <span>{version.chunk_count} chunks</span>
                     {version.file_size && <span>{formatFileSize(version.file_size)}</span>}
                     <span>{new Date(version.created_at).toLocaleDateString()}</span>

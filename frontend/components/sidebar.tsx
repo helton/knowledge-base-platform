@@ -1,13 +1,12 @@
 'use client'
 
 import { apiClient, KnowledgeBase } from '@/lib/api-client'
+import type { ActiveView } from '@/lib/types'
 import { Dispatch, SetStateAction } from 'react'
-
-type ActiveView = 'kbs' | 'documents' | 'settings' | 'create_kb' | 'document_versions' | 'kb_versions'
 
 interface SidebarProps {
   projectId: string | null
-  onSelectView: Dispatch<SetStateAction<ActiveView>>
+  onSelectView: React.Dispatch<React.SetStateAction<ActiveView>>
 }
 
 export function Sidebar({ projectId, onSelectView }: SidebarProps) {

@@ -1,9 +1,11 @@
 import os
 import uuid
 from datetime import datetime
-from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Depends
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Depends, Request, Body
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List, Optional
+from pydantic import BaseModel
+import threading
 
 from .storage import Storage, get_storage
 from .models import (
@@ -14,6 +16,8 @@ from .models import (
     DocumentVersion, DocumentVersionList,
     User,
 )
+from backend.data import process_document, archive_document_version_with_reason
+from backend.models import CreateDocumentVersionFromUrlRequest
 
 app = FastAPI(title="Knowledge Base API", version="1.0.0")
 
@@ -162,27 +166,45 @@ def create_document(kb_id: str, document_data: dict):
     return new_doc
 
 @app.post("/api/documents/{doc_id}/versions", response_model=DocumentVersion, status_code=201, tags=["Documents"])
-def create_document_version(doc_id: str, version_data: dict):
-    # In a real app, created_by would come from an auth system
+async def create_document_version(doc_id: str, request: Request):
+    # Accept both JSON and form data
+    if request.headers.get("content-type", "").startswith("multipart/form-data"):
+        form = await request.form()
+        version_name = form.get("version_name", "")
+        if not isinstance(version_name, str):
+            version_name = str(version_name) if version_name else ""
+        change_description = form.get("change_description", "")
+        if not isinstance(change_description, str):
+            change_description = str(change_description) if change_description else ""
+    else:
+        data = await request.json()
+        version_name = data.get("version_name", "")
+        if not isinstance(version_name, str):
+            version_name = str(version_name) if version_name else ""
+        change_description = data.get("change_description", "")
+        if not isinstance(change_description, str):
+            change_description = str(change_description) if change_description else ""
     new_version = storage.create_document_version(
         doc_id=doc_id,
-        version_name=version_data.get("version_name"),
-        change_description=version_data.get("change_description"),
+        version_name=version_name,
+        change_description=change_description,
         created_by="user1"
     )
+    # Trigger processing in background
+    threading.Thread(target=process_document, args=(doc_id, new_version.id), daemon=True).start()
     return new_version
 
 @app.get("/api/projects/{project_id}/documents", response_model=List[Document])
 def get_project_documents(project_id: str):
     return storage.get_documents_by_project(project_id)
 
-@app.get("/api/projects/{project_id}/document-versions", response_model=List[DocumentVersion])
+@app.get("/api/projects/{project_id}/document-versions", tags=["Documents"])
 def get_all_document_versions(project_id: str):
     documents = storage.get_documents_by_project(project_id)
     all_versions = []
     for doc in documents:
         all_versions.extend(storage.get_document_versions_by_document(doc.id))
-    return all_versions
+    return {"document_versions": all_versions}
 
 @app.get("/api/documents/{document_id}", response_model=Document)
 def get_document(document_id: str):
@@ -197,4 +219,77 @@ def get_document_version(version_id: str):
     version = get_document_version_by_id(version_id)
     if not version:
         raise HTTPException(status_code=404, detail="Document version not found")
-    return version 
+    return version
+
+@app.post("/api/knowledge-bases/{kb_id}/documents/upload", response_model=Document, status_code=201, tags=["Documents"])
+def upload_document(
+    kb_id: str,
+    file: UploadFile = File(...),
+    name: str = Form(...),
+    description: str = Form(''),
+    chunking_method: str = Form('FIXED_SIZE'),
+    embedding_provider: str = Form('OPENAI'),
+    embedding_model: str = Form('TEXT_EMBEDDING_ADA_002'),
+    chunk_size: int = Form(1000),
+    chunk_overlap: int = Form(200),
+):
+    new_doc = storage.create_document(
+        kb_id=kb_id,
+        name=name,
+        description=description,
+        created_by="user1"
+    )
+    # Find the initial version and process it in the background
+    from backend.data import get_document_versions_by_document
+    versions = get_document_versions_by_document(new_doc.id)
+    if versions:
+        initial_version = versions[0]
+        # Set the file_name on the initial version
+        initial_version.file_name = file.filename
+        storage.update_document_version(initial_version)
+        threading.Thread(target=process_document, args=(new_doc.id, initial_version.id), daemon=True).start()
+    return new_doc
+
+class CreateDocumentFromUrlRequest(BaseModel):
+    url: str
+    name: str = None
+    description: str = None
+
+@app.post("/api/knowledge-bases/{kb_id}/documents/from-url", response_model=Document, status_code=201, tags=["Documents"])
+def create_document_from_url(kb_id: str, request: CreateDocumentFromUrlRequest):
+    new_doc = storage.create_document(
+        kb_id=kb_id,
+        name=request.name or request.url,
+        description=request.description or '',
+        created_by="user1"
+    )
+    from backend.data import get_document_versions_by_document
+    versions = get_document_versions_by_document(new_doc.id)
+    if versions:
+        initial_version = versions[0]
+        threading.Thread(target=process_document, args=(new_doc.id, initial_version.id), daemon=True).start()
+    return new_doc
+
+@app.put("/api/documents/{doc_id}/versions/{version_id}/archive", response_model=DocumentVersion, tags=["Documents"])
+def archive_document_version(doc_id: str, version_id: str, body: dict = Body(...)):
+    reason = body.get('reason', '')
+    success = archive_document_version_with_reason(version_id, reason)
+    from backend.data import get_document_version_by_id
+    version = get_document_version_by_id(version_id)
+    if not success or not version:
+        raise HTTPException(status_code=404, detail="Document version not found or could not be archived")
+    return version
+
+@app.post("/api/documents/{doc_id}/versions/from-url", response_model=DocumentVersion, status_code=201, tags=["Documents"])
+def create_document_version_from_url(doc_id: str, request: CreateDocumentVersionFromUrlRequest):
+    # Create a new document version for the given document using the provided URL
+    new_version = storage.create_document_version(
+        doc_id=doc_id,
+        version_name=f"From URL: {request.url}",
+        change_description=request.change_description or f"Added from URL: {request.url}",
+        created_by="user1",
+        source_url=request.url
+    )
+    # Trigger processing in background
+    threading.Thread(target=process_document, args=(doc_id, new_version.id), daemon=True).start()
+    return new_version 

@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Eye, GitBranch, Archive, CheckCircle, Star, Edit, Trash2 } from 'lucide-react'
+import { Eye, GitBranch, Archive, CheckCircle, Star, Edit, Trash2, Lock, Users, Globe } from 'lucide-react'
 
 interface KnowledgeBaseVersionsProps {
   kb: KnowledgeBase
@@ -142,7 +142,14 @@ export function KnowledgeBaseVersions({ kb, onViewDocuments, onCreateVersion, on
                       {version.status}
                     </Badge>
                   </TableCell>
-                  <TableCell>{version.access_level}</TableCell>
+                  <TableCell>
+                    <span className="flex items-center gap-2" title={version.access_level.charAt(0).toUpperCase() + version.access_level.slice(1)}>
+                      {version.access_level === 'private' && <Lock className="inline h-4 w-4" />}
+                      {version.access_level === 'protected' && <Users className="inline h-4 w-4" />}
+                      {version.access_level === 'public' && <Globe className="inline h-4 w-4" />}
+                      <span className="capitalize">{version.access_level}</span>
+                    </span>
+                  </TableCell>
                   <TableCell>{version.release_notes}</TableCell>
                   <TableCell>
                     {new Date(version.created_at).toLocaleDateString()}

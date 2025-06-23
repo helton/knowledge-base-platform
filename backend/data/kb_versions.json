@@ -1,59 +1,78 @@
 [
   {
-    "id": "8a987fc6-541a-487e-b098-9b96e829b403",
+    "id": "e73f2fcc-0957-485f-8180-5a33b52a50df",
     "knowledge_base_id": "62a84912-754b-4b13-b113-95600092cf8c",
     "version_number": "1.0.0",
-    "version_name": "new version",
-    "release_notes": "aaaaaa",
-    "status": "archived",
+    "version_name": "",
+    "release_notes": "xxxx",
+    "status": "published",
     "access_level": "private",
     "is_primary": false,
     "document_version_ids": [
-      "2ab0f51f-fa59-4d80-ac2e-62503aee9ce3"
+      "702224cb-cf5c-476e-ad5e-9b5658265035"
     ],
     "created_by": "user1",
-    "created_at": "2025-06-23 01:53:25.900386",
-    "updated_at": "2025-06-23 03:06:30.925073",
+    "created_at": "2025-06-23 12:30:35.531417",
+    "updated_at": "2025-06-23 12:31:39.464972",
     "published_by": "user1",
-    "published_at": "2025-06-23 02:37:10.915638",
-    "archived_by": "user1",
-    "archived_at": "2025-06-23 03:06:30.925055"
-  },
-  {
-    "id": "4d64d2c0-f1dc-46e4-b637-e70acf05fae1",
-    "knowledge_base_id": "62a84912-754b-4b13-b113-95600092cf8c",
-    "version_number": "1.0.1",
-    "version_name": "asdada",
-    "release_notes": "asdadasdasdsada",
-    "status": "published",
-    "access_level": "private",
-    "is_primary": true,
-    "document_version_ids": [
-      "2ab0f51f-fa59-4d80-ac2e-62503aee9ce3",
-      "c61e0c35-e21b-4260-9d56-125eb397eb9b"
-    ],
-    "created_by": "user1",
-    "created_at": "2025-06-23 02:21:35.075948",
-    "updated_at": "2025-06-23 03:06:26.529896",
-    "published_by": "user1",
-    "published_at": "2025-06-23 02:36:57.306252",
+    "published_at": "2025-06-23 12:31:39.464954",
     "archived_by": null,
     "archived_at": null
   },
   {
-    "id": "8f5a6b1a-1b2b-4dc2-a8d3-2e8c42073586",
+    "id": "827ca55f-d3f8-447b-97bb-67a6b10ccbbb",
     "knowledge_base_id": "62a84912-754b-4b13-b113-95600092cf8c",
-    "version_number": "1.0.2",
-    "version_name": "asdasdasd",
-    "release_notes": "ssss",
-    "status": "draft",
+    "version_number": "1.0.1",
+    "version_name": "",
+    "release_notes": "",
+    "status": "published",
+    "access_level": "private",
+    "is_primary": false,
+    "document_version_ids": [
+      "1e8bb6a6-b18e-4b03-97e9-ca5490dd7578"
+    ],
+    "created_by": "user1",
+    "created_at": "2025-06-23 12:31:07.193819",
+    "updated_at": "2025-06-23 12:31:40.135241",
+    "published_by": "user1",
+    "published_at": "2025-06-23 12:31:40.135236",
+    "archived_by": null,
+    "archived_at": null
+  },
+  {
+    "id": "de387130-408f-4bc0-b187-6c5b60b225e2",
+    "knowledge_base_id": "62a84912-754b-4b13-b113-95600092cf8c",
+    "version_number": "2.0.0",
+    "version_name": "",
+    "release_notes": "asdasdas",
+    "status": "published",
     "access_level": "protected",
     "is_primary": false,
     "document_version_ids": [
-      "2ab0f51f-fa59-4d80-ac2e-62503aee9ce3"
+      "e01010e4-d498-4741-b0a5-293c3c926554"
     ],
     "created_by": "user1",
-    "created_at": "2025-06-23 02:48:07.389700",
+    "created_at": "2025-06-23 12:31:22.041330",
+    "updated_at": "2025-06-23 12:31:40.757806",
+    "published_by": "user1",
+    "published_at": "2025-06-23 12:31:40.757800",
+    "archived_by": null,
+    "archived_at": null
+  },
+  {
+    "id": "388e45a3-011d-4fe9-b023-38302e1bd45c",
+    "knowledge_base_id": "62a84912-754b-4b13-b113-95600092cf8c",
+    "version_number": "2.0.1",
+    "version_name": "",
+    "release_notes": "",
+    "status": "draft",
+    "access_level": "public",
+    "is_primary": false,
+    "document_version_ids": [
+      "1e8bb6a6-b18e-4b03-97e9-ca5490dd7578"
+    ],
+    "created_by": "user1",
+    "created_at": "2025-06-23 12:31:50.701784",
     "updated_at": null,
     "published_by": null,
     "published_at": null,

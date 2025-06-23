@@ -151,6 +151,7 @@ class DocumentVersion(BaseModel):
     file_size: Optional[int] = None  # Size of the versioned file
     mime_type: Optional[str] = None  # MIME type of the versioned file
     source_url: Optional[str] = None
+    file_name: Optional[str] = None  # Original uploaded file name
     is_archived: bool = False
     archive_reason: Optional[str] = None  # Reason for archiving
     archived_at: Optional[datetime] = None

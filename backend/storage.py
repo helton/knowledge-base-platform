@@ -293,11 +293,25 @@ class Storage:
             id=str(uuid.uuid4()),
             name=name,
             description=description,
-            kb_id=kb_id,
+            knowledge_base_id=kb_id,
             created_by=created_by,
-            status=DocumentStatus.DRAFT,
+            status=DocumentStatus.PENDING,
+            created_at=datetime.now(),
+            updated_at=datetime.now()
         )
         self._documents[doc.id] = doc
+        # Create initial version with version_number='1'
+        version = DocumentVersion(
+            id=str(uuid.uuid4()),
+            document_id=doc.id,
+            version_number="1",
+            version_name="Initial version",
+            status=DocumentStatus.PENDING,
+            created_by=created_by,
+            created_at=datetime.now(),
+            updated_at=datetime.now()
+        )
+        self._document_versions[version.id] = version
         self._save_all()
         return doc
 
@@ -318,15 +332,18 @@ class Storage:
     def get_document(self, doc_id: str) -> Optional[Document]:
         return self._documents.get(doc_id)
 
-    def create_document_version(self, doc_id: str, version_name: str = None, change_description: str = None, created_by: str = None) -> DocumentVersion:
-        # Get the latest version number
+    def create_document_version(self, doc_id: str, version_name: str = None, change_description: str = None, created_by: str = None, source_url: str = None) -> DocumentVersion:
+        # Get the latest version number as integer
         existing_versions = self.get_document_versions_by_document(doc_id)
         if not existing_versions:
-            new_version_number = "1.0"
+            new_version_number = "1"
         else:
-            latest_version = max(existing_versions, key=lambda v: float(v.version_number))
-            new_version_number = str(float(latest_version.version_number) + 0.1)
-
+            # Find the highest integer version_number
+            int_versions = [int(v.version_number) for v in existing_versions if v.version_number.isdigit()]
+            if int_versions:
+                new_version_number = str(max(int_versions) + 1)
+            else:
+                new_version_number = "1"
         version = DocumentVersion(
             id=str(uuid.uuid4()),
             document_id=doc_id,
@@ -334,6 +351,7 @@ class Storage:
             version_name=version_name,
             change_description=change_description,
             created_by=created_by,
+            source_url=source_url
         )
         self._document_versions[version.id] = version
         self._save_all()

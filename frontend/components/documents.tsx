@@ -236,7 +236,7 @@ export function Documents({ selectedKb, onDocumentSelect, onViewVersions }: Docu
         <div className="flex gap-2">
           {onViewVersions && (
             <button onClick={onViewVersions} className="btn btn-secondary">
-              View KB Versions
+              View Knowledge Base Versions
             </button>
           )}
           <button onClick={() => setShowAddDocModal(true)} className="btn btn-primary">

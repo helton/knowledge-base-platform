@@ -12,6 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { X } from 'lucide-react'
 
 interface CreateKbVersionProps {
   kb: KnowledgeBase
@@ -32,6 +33,48 @@ export function CreateKbVersion({ kb, draftVersion, onVersionCreated, onCancel }
   const [versionName, setVersionName] = useState('')
   const [releaseNotes, setReleaseNotes] = useState('')
   const [accessLevel, setAccessLevel] = useState<'private' | 'protected' | 'public'>('private')
+  const [showAddDoc, setShowAddDoc] = useState(false)
+  const [docToAdd, setDocToAdd] = useState<string>('')
+
+  // Helper: get the last version number from previous KB versions (excluding drafts)
+  const [lastVersion, setLastVersion] = useState<string>('1.0.0')
+  useEffect(() => {
+    async function fetchLastVersion() {
+      const kbVersions = await apiClient.getKnowledgeBaseVersions(kb.id)
+      const published = kbVersions.filter(v => v.status !== 'draft')
+      if (published.length > 0) {
+        // Sort by version_number descending
+        published.sort((a, b) => (b.version_number || '').localeCompare(a.version_number || ''))
+        setLastVersion(published[0].version_number || '1.0.0')
+      } else {
+        setLastVersion('1.0.0')
+      }
+    }
+    fetchLastVersion()
+  }, [kb.id])
+
+  // Helper: calculate next version numbers
+  function getNextVersionNumbers(current: string) {
+    const [major, minor, patch] = current.split('.').map(Number)
+    return {
+      patch: `v${major}.${minor}.${patch + 1} (patch)` ,
+      minor: `v${major}.${minor + 1}.0 (minor)` ,
+      major: `v${major + 1}.0.0 (major)`
+    }
+  }
+  const nextVersions = getNextVersionNumbers(lastVersion)
+
+  // Determine if this is the first release (no previous versions)
+  const isFirstRelease = !draftVersion && documents.length > 0 && Object.values(documentVersions).flat().length === 0;
+
+  // If first release, set defaults and lock fields
+  useEffect(() => {
+    if (isFirstRelease) {
+      setVersionBump('patch');
+      setVersionName('First Release');
+      setAccessLevel('private');
+    }
+  }, [isFirstRelease]);
 
   const fetchData = async () => {
     if (kb) {
@@ -75,16 +118,17 @@ export function CreateKbVersion({ kb, draftVersion, onVersionCreated, onCancel }
           setReleaseNotes(draftVersion.release_notes || '')
           setAccessLevel(draftVersion.access_level || 'private')
           
+          // Robust mapping: for each document_version_id, find the corresponding document and set mapping
           const selected: Record<string, string> = {}
-          draftVersion.document_version_ids.forEach(versionId => {
-            for (const doc of docs) {
-              const docVer = versionsByDoc[doc.id]?.find(v => v.id === versionId)
-              if (docVer) {
-                selected[doc.id] = versionId
-                break
-              }
+          // Fetch all document versions for the draft's document_version_ids
+          await Promise.all(draftVersion.document_version_ids.map(async (versionId) => {
+            try {
+              const version = await apiClient.getDocumentVersion(versionId)
+              selected[version.document_id] = versionId
+            } catch (e) {
+              // If not found, skip
             }
-          })
+          }))
           setSelectedVersions(selected)
         }
       } catch (err: any) {
@@ -104,6 +148,7 @@ export function CreateKbVersion({ kb, draftVersion, onVersionCreated, onCancel }
     setIsLoading(true);
     setError(null);
     const versionData = {
+      version_bump: isFirstRelease ? 'patch' : versionBump,
       version_name: versionName,
       release_notes: releaseNotes,
       access_level: accessLevel,
@@ -131,6 +176,36 @@ export function CreateKbVersion({ kb, draftVersion, onVersionCreated, onCancel }
     }))
   }
 
+  // Helper: get list of document IDs currently in the draft
+  const selectedDocIds = Object.keys(selectedVersions)
+  // Helper: get list of documents not yet added
+  const availableDocs = documents.filter(doc => !selectedDocIds.includes(doc.id))
+
+  // Add a document to the draft
+  const handleAddDocument = () => {
+    if (docToAdd && !selectedDocIds.includes(docToAdd)) {
+      // Pick the latest version by default if available
+      const versions = (documentVersions[docToAdd] || []).slice().sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      const latest = versions[0]?.id || ''
+      setSelectedVersions(prev => ({ ...prev, [docToAdd]: latest }))
+      setDocToAdd('')
+      setShowAddDoc(false)
+      fetchData(); // Refresh document/version lists after adding
+    }
+  }
+
+  // Remove a document from the draft
+  const handleRemoveDocument = (docId: string) => {
+    setSelectedVersions(prev => {
+      const copy = { ...prev }
+      delete copy[docId]
+      return copy
+    })
+  }
+
+  // Validation: require a version selected for every document
+  const allVersionsSelected = selectedDocIds.length > 0 && selectedDocIds.every(docId => selectedVersions[docId])
+
   if (!kb) {
     return (
       <div className="p-4 text-center text-gray-500">
@@ -144,24 +219,34 @@ export function CreateKbVersion({ kb, draftVersion, onVersionCreated, onCancel }
       <h1 className="text-2xl font-bold mb-4">
         {draftVersion ? 'Edit Draft Version' : 'Create New Version'} for {kb.name}
       </h1>
-      {error && <div className="text-red-500 bg-red-100 p-2 rounded mb-4">{error}</div>}
+      {error && (
+        <div className="mb-4">
+          <div className="rounded border border-yellow-400 bg-yellow-50 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 px-4 py-2 text-sm flex items-center gap-2">
+            <span className="font-semibold">Draft:</span> This is a draft version. Please publish it before creating a new version.
+          </div>
+        </div>
+      )}
       
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+      <div className="flex flex-col gap-8 max-w-3xl">
         <div className="p-4 border rounded-lg bg-gray-50 dark:bg-gray-800">
           <h3 className="text-lg font-semibold mb-4">Version Details</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium mb-1">Version Bump</label>
-              <select
-                value={versionBump}
-                onChange={(e) => setVersionBump(e.target.value as 'major' | 'minor' | 'patch')}
-                className="w-full px-3 py-2 border rounded-md"
-                disabled={documents.length === 0} // Disable if no documents loaded yet
-              >
-                <option value="patch">Patch (1.0.0 → 1.0.1)</option>
-                <option value="minor">Minor (1.0.0 → 1.1.0)</option>
-                <option value="major">Major (1.0.0 → 2.0.0)</option>
-              </select>
+              <label className="block text-sm font-medium mb-1">Version</label>
+              {isFirstRelease ? (
+                <div className="w-full px-3 py-2 border rounded-md bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200">v1.0.0</div>
+              ) : (
+                <select
+                  value={versionBump}
+                  onChange={(e) => setVersionBump(e.target.value as 'major' | 'minor' | 'patch')}
+                  className="w-full px-3 py-2 border rounded-md"
+                  disabled={documents.length === 0}
+                >
+                  <option value="patch">{nextVersions.patch}</option>
+                  <option value="minor">{nextVersions.minor}</option>
+                  <option value="major">{nextVersions.major}</option>
+                </select>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">Version Name (Optional)</label>
@@ -171,6 +256,7 @@ export function CreateKbVersion({ kb, draftVersion, onVersionCreated, onCancel }
                 onChange={(e) => setVersionName(e.target.value)}
                 className="w-full px-3 py-2 border rounded-md"
                 placeholder="e.g., 'Updated with new data'"
+                disabled={false}
               />
             </div>
             <div>
@@ -179,6 +265,7 @@ export function CreateKbVersion({ kb, draftVersion, onVersionCreated, onCancel }
                 value={accessLevel}
                 onChange={(e) => setAccessLevel(e.target.value as 'private' | 'protected' | 'public')}
                 className="w-full px-3 py-2 border rounded-md"
+                disabled={false}
               >
                 <option value="private">Private</option>
                 <option value="protected">Protected</option>
@@ -203,72 +290,100 @@ export function CreateKbVersion({ kb, draftVersion, onVersionCreated, onCancel }
           {isLoading ? (
             <p>Loading documents...</p>
           ) : (
-            <div className="border rounded-lg">
+            <div className="border rounded-lg p-4">
+              <div className="mb-4 flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowAddDoc(true)}
+                  disabled={availableDocs.length === 0}
+                >
+                  + Add Document
+                </Button>
+                {showAddDoc && (
+                  <div className="flex items-center gap-2 ml-2">
+                    <select
+                      value={docToAdd}
+                      onChange={e => setDocToAdd(e.target.value)}
+                      className="px-2 py-1 border rounded text-sm"
+                    >
+                      <option value="">Select document...</option>
+                      {availableDocs.map(doc => (
+                        <option key={doc.id} value={doc.id}>{doc.name}</option>
+                      ))}
+                    </select>
+                    <Button
+                      size="sm"
+                      onClick={handleAddDocument}
+                      disabled={!docToAdd}
+                    >
+                      Add
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => { setShowAddDoc(false); setDocToAdd('') }}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                )}
+              </div>
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Document</TableHead>
-                    <TableHead>Available Versions</TableHead>
-                    <TableHead>Selected Version</TableHead>
+                    <TableHead>Version</TableHead>
+                    <TableHead></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {documents.map((document) => {
-                    const versions = documentVersions[document.id] || []
-                    const selectedVersionId = selectedVersions[document.id]
-                    const selectedVersion = versions.find(v => v.id === selectedVersionId)
-                    
-                    return (
-                      <TableRow key={document.id}>
+                  {selectedDocIds.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={3} className="text-center text-gray-500">No documents added</TableCell>
+                    </TableRow>
+                  )}
+                  {selectedDocIds.map(docId => {
+                    const doc = documents.find(d => d.id === docId)
+                    const versions = documentVersions[docId] || []
+                    const selectedVersionId = selectedVersions[docId]
+                    return doc ? (
+                      <TableRow key={doc.id}>
                         <TableCell>
                           <div>
-                            <div className="font-medium">{document.name}</div>
-                            <div className="text-sm text-gray-500">{document.description}</div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="space-y-1">
-                            {versions.map((version) => (
-                              <div key={version.id} className="text-sm">
-                                <Badge className="mr-2">
-                                  {version.version_number}
-                                </Badge>
-                                {version.version_name && (
-                                  <span className="text-gray-600">{version.version_name}</span>
-                                )}
-                              </div>
-                            ))}
-                            {versions.length === 0 && (
-                              <span className="text-gray-500 text-sm">No versions available</span>
-                            )}
+                            <div className="font-medium">{doc.name}</div>
+                            <div className="text-sm text-gray-500">{doc.description}</div>
                           </div>
                         </TableCell>
                         <TableCell>
                           <select
                             value={selectedVersionId || ''}
-                            onChange={(e) => handleVersionSelect(document.id, e.target.value)}
+                            onChange={e => handleVersionSelect(doc.id, e.target.value)}
                             className="w-full px-2 py-1 border rounded text-sm"
                           >
                             <option value="">No version selected</option>
-                            {versions.map((version) => (
-                              <option key={version.id} value={version.id}>
-                                {version.version_number} - {version.version_name || 'No name'}
-                                {version.is_archived ? ' (ARCHIVED)' : ''}
-                              </option>
-                            ))}
+                            {versions
+                              .slice() // copy to avoid mutating state
+                              .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+                              .map(version => (
+                                <option key={version.id} value={version.id}>
+                                  {version.version_number.startsWith('v') ? version.version_number : `v${version.version_number}`} - {new Date(version.created_at).toISOString().slice(0, 10)}{version.is_archived ? ' (ARCHIVED)' : ''}
+                                </option>
+                              ))}
                           </select>
-                          {selectedVersion && selectedVersion.is_archived && (
-                            <div className="mt-2 p-2 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded text-sm">
-                              <div className="flex items-center gap-2 text-orange-700 dark:text-orange-300">
-                                <span className="text-orange-500">⚠️</span>
-                                <span className="font-medium">Warning:</span>
-                                <span>This document version is archived and may be outdated.</span>
-                              </div>
-                            </div>
-                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleRemoveDocument(doc.id)}
+                            aria-label="Remove document"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
                         </TableCell>
                       </TableRow>
-                    )
+                    ) : null
                   })}
                 </TableBody>
               </Table>
@@ -276,16 +391,17 @@ export function CreateKbVersion({ kb, draftVersion, onVersionCreated, onCancel }
           )}
         </div>
 
-        <div>
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={onCancel}>
-              Cancel
-            </Button>
-            <Button onClick={handleCreateOrUpdateVersion} disabled={isLoading}>
-              {isLoading ? (draftVersion ? 'Updating...' : 'Creating...') : (draftVersion ? 'Update Draft' : 'Create Version')}
-            </Button>
-          </div>
+        <div className="mt-8 flex gap-2">
+          <Button variant="outline" onClick={onCancel}>
+            Cancel
+          </Button>
+          <Button onClick={handleCreateOrUpdateVersion} disabled={isLoading || !allVersionsSelected}>
+            {isLoading ? (draftVersion ? 'Updating...' : 'Creating...') : (draftVersion ? 'Update Draft' : 'Create Version')}
+          </Button>
         </div>
+        {!allVersionsSelected && (
+          <div className="text-sm text-red-500 mt-2">Please select a version for every document before saving.</div>
+        )}
       </div>
     </div>
   )

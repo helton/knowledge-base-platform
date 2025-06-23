@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Header } from '@/components/header'
+import type { ActiveView } from '@/lib/types'
 import { Sidebar } from '@/components/sidebar'
 import { Documents } from '@/components/documents'
 import { KnowledgeBases } from '@/components/knowledge-bases'
@@ -14,8 +15,6 @@ import { KnowledgeBaseVersions } from '@/components/knowledge-base-versions'
 import { CreateKbVersion } from '@/components/create-kb-version'
 import { KnowledgeBaseDetail } from '@/components/knowledge-base-detail'
 import { KbVersionDetail } from '@/components/kb-version-detail'
-
-type ActiveView = 'kbs' | 'documents' | 'settings' | 'create_kb' | 'document_versions' | 'kb_versions' | 'kb_detail' | 'kb_version_detail' | 'create_kb_version'
 
 export default function Page() {
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null)
@@ -132,7 +131,11 @@ export default function Page() {
 
   const handleKbVersionSelect = (version: KnowledgeBaseVersion) => {
     setSelectedKbVersion(version)
-    setActiveView('kb_version_detail')
+    if (version.status === 'draft') {
+      setActiveView('create_kb_version')
+    } else {
+      setActiveView('kb_version_detail')
+    }
   }
 
   return (
@@ -143,7 +146,7 @@ export default function Page() {
         project={project}
         knowledgeBase={selectedKb}
         document={selectedDocument}
-        documentVersion={selectedDocumentVersion}
+        documentVersion={activeView === 'kb_version_detail' ? selectedDocumentVersion : null}
         onProjectClick={handleProjectClick}
         onKnowledgeBaseClick={handleKnowledgeBaseClick}
         onDocumentClick={handleDocumentClick}
@@ -152,7 +155,7 @@ export default function Page() {
       <div className="flex flex-1">
         <Sidebar 
           projectId={selectedProjectId}
-          onSelectView={(view: ActiveView) => setActiveView(view)}
+          onSelectView={setActiveView}
         />
         <main className="flex-1 p-6 overflow-auto">
           {activeView === 'kbs' && selectedProjectId && (

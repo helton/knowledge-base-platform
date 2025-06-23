@@ -28,9 +28,11 @@ type DocumentWithVersionInfo = Document & {
 
 interface DocumentsProps {
   selectedKb: { id: string; name: string } | null
+  onDocumentSelect?: (document: Document | null) => void
+  onDocumentVersionSelect?: (documentVersion: DocumentVersion | null) => void
 }
 
-export function Documents({ selectedKb }: DocumentsProps) {
+export function Documents({ selectedKb, onDocumentSelect, onDocumentVersionSelect }: DocumentsProps) {
   const [documents, setDocuments] = useState<DocumentWithVersionInfo[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -301,12 +303,14 @@ export function Documents({ selectedKb }: DocumentsProps) {
 
   const openVersionModal = async (doc: DocumentWithVersionInfo) => {
     setSelectedDocument(doc)
+    onDocumentSelect?.(doc)
     await loadDocumentVersions(doc.id)
     setShowVersionModal(true)
   }
 
   const openEditDescriptionModal = (doc: DocumentWithVersionInfo) => {
     setSelectedDocument(doc)
+    onDocumentSelect?.(doc)
     setEditingDescription(doc.description || '')
     setShowEditDescriptionModal(true)
   }
@@ -333,6 +337,14 @@ export function Documents({ selectedKb }: DocumentsProps) {
     const sizes = ['Bytes', 'KB', 'MB', 'GB']
     const i = Math.floor(Math.log(bytes) / Math.log(k))
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+  }
+
+  const closeVersionModal = () => {
+    setShowVersionModal(false)
+    onDocumentSelect?.(null)
+    onDocumentVersionSelect?.(null)
+    setSelectedDocument(null)
+    setDocumentVersions([])
   }
 
   if (!selectedKb) {
@@ -433,6 +445,7 @@ export function Documents({ selectedKb }: DocumentsProps) {
                   <button
                     onClick={() => {
                       setSelectedDocument(doc)
+                      onDocumentSelect?.(doc)
                       setShowArchiveDocModal(true)
                     }}
                     className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full"
@@ -553,7 +566,7 @@ export function Documents({ selectedKb }: DocumentsProps) {
               <h3 className="text-lg font-semibold">Versions: {selectedDocument.name}</h3>
               <div className="flex space-x-2">
                 <button onClick={() => setShowAddVersionModal(true)} className="btn btn-primary">Add a new version</button>
-                <button onClick={() => setShowVersionModal(false)} className="btn btn-secondary">Close</button>
+                <button onClick={closeVersionModal} className="btn btn-secondary">Close</button>
               </div>
             </div>
             <div className="space-y-3">
@@ -585,7 +598,18 @@ export function Documents({ selectedKb }: DocumentsProps) {
                       </div>
                     </div>
                     {!version.is_archived && (
-                        <button onClick={() => { setSelectedVersion(version); setShowArchiveVersionModal(true); }} className="p-1.5 text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400" title="Archive version"><Trash2 className="w-4 h-4" /></button>
+                        <button 
+                          onClick={() => {
+                            setSelectedVersion(version)
+                            onDocumentSelect?.(selectedDocument)
+                            onDocumentVersionSelect?.(version)
+                            setShowArchiveVersionModal(true)
+                          }} 
+                          className="p-1.5 text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400" 
+                          title="Archive version"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                     )}
                   </div>
                   {version.is_archived && version.archive_reason && (<div className="text-xs text-gray-500 dark:text-gray-400 border-t border-gray-200 dark:border-gray-700 mt-3 pt-2"><span className="font-semibold">Archive Reason:</span> {version.archive_reason}</div>)}

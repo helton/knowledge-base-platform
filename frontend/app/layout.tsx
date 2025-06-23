@@ -6,7 +6,7 @@ import { ThemeProvider } from '@/components/theme-provider'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'RAG Knowledge Base Platform',
+  title: 'Knowledge Base Platform',
   description: 'Manage your knowledge bases and documents with AI-powered RAG workflows',
 }
 

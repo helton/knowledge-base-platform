@@ -1,6 +1,6 @@
-# Next.js Frontend for RAG Knowledge Base Platform
+# Next.js Frontend for Knowledge Base Platform
 
-This is the Next.js frontend for the RAG Knowledge Base Platform, providing a modern, type-safe interface for managing knowledge bases and documents.
+This is the Next.js frontend for the Knowledge Base Platform, providing a modern, type-safe interface for managing knowledge bases and documents.
 
 ## Features
 

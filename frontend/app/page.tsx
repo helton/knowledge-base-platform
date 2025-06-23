@@ -1,29 +1,76 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Header } from '@/components/header'
 import { Sidebar } from '@/components/sidebar'
 import { Documents } from '@/components/documents'
 import { KnowledgeBases } from '@/components/knowledge-bases'
 import { Settings } from '@/components/settings'
-import { KnowledgeBase } from '@/lib/api-client'
+import { KnowledgeBase, Project, Document, DocumentVersion } from '@/lib/api-client'
+import { apiClient } from '@/lib/api-client'
+import { CreateKnowledgeBase } from '@/components/create-knowledge-base'
 
-type ActiveView = 'kbs' | 'documents' | 'settings'
+type ActiveView = 'kbs' | 'documents' | 'settings' | 'create_kb'
 
 export default function Page() {
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null)
   const [selectedKb, setSelectedKb] = useState<KnowledgeBase | null>(null)
+  const [selectedDocument, setSelectedDocument] = useState<Document | null>(null)
+  const [selectedDocumentVersion, setSelectedDocumentVersion] = useState<DocumentVersion | null>(null)
   const [activeView, setActiveView] = useState<ActiveView>('kbs')
+  const [project, setProject] = useState<Project | null>(null)
+
+  useEffect(() => {
+    if (selectedProjectId) {
+      loadProject(selectedProjectId)
+    } else {
+      setProject(null)
+    }
+  }, [selectedProjectId])
+
+  const loadProject = async (projectId: string) => {
+    try {
+      const projectData = await apiClient.getProject(projectId)
+      setProject(projectData)
+    } catch (error) {
+      console.error('Failed to load project:', error)
+    }
+  }
 
   const handleProjectSelect = (projectId: string) => {
     setSelectedProjectId(projectId)
     setSelectedKb(null)
+    setSelectedDocument(null)
+    setSelectedDocumentVersion(null)
     setActiveView('kbs')
   }
 
   const handleKbSelect = (kb: KnowledgeBase) => {
     setSelectedKb(kb)
+    setSelectedDocument(null)
+    setSelectedDocumentVersion(null)
     setActiveView('documents')
+  }
+
+  const handleProjectClick = () => {
+    setSelectedKb(null)
+    setSelectedDocument(null)
+    setSelectedDocumentVersion(null)
+    setActiveView('kbs')
+  }
+
+  const handleKnowledgeBaseClick = () => {
+    setSelectedDocument(null)
+    setSelectedDocumentVersion(null)
+    setActiveView('documents')
+  }
+
+  const handleDocumentClick = () => {
+    setSelectedDocumentVersion(null)
+  }
+
+  const handleDocumentVersionClick = () => {
+    // Already on document version view
   }
 
   return (
@@ -31,6 +78,14 @@ export default function Page() {
       <Header 
         selectedProjectId={selectedProjectId}
         onProjectSelect={handleProjectSelect}
+        project={project}
+        knowledgeBase={selectedKb}
+        document={selectedDocument}
+        documentVersion={selectedDocumentVersion}
+        onProjectClick={handleProjectClick}
+        onKnowledgeBaseClick={handleKnowledgeBaseClick}
+        onDocumentClick={handleDocumentClick}
+        onDocumentVersionClick={handleDocumentVersionClick}
       />
       <div className="flex flex-1">
         <Sidebar 
@@ -45,8 +100,18 @@ export default function Page() {
               onKbSelect={handleKbSelect}
             />
           )}
+          {activeView === 'create_kb' && selectedProjectId && (
+            <CreateKnowledgeBase
+              projectId={selectedProjectId}
+              onKbCreated={handleKbSelect}
+            />
+          )}
           {activeView === 'documents' && selectedKb && (
-            <Documents selectedKb={selectedKb} />
+            <Documents 
+              selectedKb={selectedKb}
+              onDocumentSelect={setSelectedDocument}
+              onDocumentVersionSelect={setSelectedDocumentVersion}
+            />
           )}
           {activeView === 'settings' && <Settings kbId={selectedKb?.id || null} />}
         </main>

@@ -71,3 +71,11 @@
     @apply bg-openai-dark;
   }
 }
+
+.btn-primary {
+  @apply bg-black dark:bg-white text-white dark:text-black;
+}
+
+.btn-secondary {
+  @apply bg-gray-100 dark:bg-gray-800 text-black dark:text-white;
+}

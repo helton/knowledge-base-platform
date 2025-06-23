@@ -20,14 +20,13 @@ class UserRole(str, Enum):
 class KnowledgeBaseStatus(str, Enum):
     ACTIVE = "active"
     INACTIVE = "inactive"
-    DRAFT = "draft"
-    DEPRECATED = "deprecated"
+    ARCHIVED = "archived"
 
 
 class VersionStatus(str, Enum):
     DRAFT = "draft"
     PUBLISHED = "published"
-    DEPRECATED = "deprecated"
+    ARCHIVED = "archived"
 
 
 class DocumentStatus(str, Enum):
@@ -35,7 +34,7 @@ class DocumentStatus(str, Enum):
     PROCESSING = "processing"
     COMPLETED = "completed"
     FAILED = "failed"
-    DEPRECATED = "deprecated"
+    ARCHIVED = "archived"
 
 
 class ProcessingStage(str, Enum):
@@ -123,6 +122,8 @@ class Document(BaseModel):
     created_by: str
     created_at: datetime = Field(default_factory=datetime.now)
     updated_at: datetime = Field(default_factory=datetime.now)
+    version_count: Optional[int] = None
+    latest_version_number: Optional[int] = None
 
 
 class DocumentVersion(BaseModel):
@@ -145,10 +146,10 @@ class DocumentVersion(BaseModel):
     file_path: Optional[str] = None  # Path to the versioned file
     file_size: Optional[int] = None  # Size of the versioned file
     mime_type: Optional[str] = None  # MIME type of the versioned file
-    is_deprecated: bool = False
-    deprecation_reason: Optional[str] = None  # Reason for deprecation
-    deprecated_at: Optional[datetime] = None
-    deprecated_by: Optional[str] = None  # User ID who deprecated this version
+    is_archived: bool = False
+    archive_reason: Optional[str] = None  # Reason for archiving
+    archived_at: Optional[datetime] = None
+    archived_by: Optional[str] = None  # User ID who archived this version
     created_by: str
     created_at: datetime = Field(default_factory=datetime.now)
     updated_at: datetime = Field(default_factory=datetime.now)
@@ -159,7 +160,7 @@ class KnowledgeBase(BaseModel):
     name: str
     description: Optional[str] = None
     project_id: str
-    status: KnowledgeBaseStatus = KnowledgeBaseStatus.DRAFT
+    status: KnowledgeBaseStatus = KnowledgeBaseStatus.ARCHIVED
     access_level: AccessLevel = AccessLevel.PRIVATE
     is_primary: bool = False
     current_version: Optional[str] = None
@@ -173,7 +174,7 @@ class KnowledgeBaseVersion(BaseModel):
     knowledge_base_id: str
     version_number: str
     description: Optional[str] = None
-    status: VersionStatus = VersionStatus.DRAFT
+    status: VersionStatus = VersionStatus.ARCHIVED
     chunking_method: ChunkingMethod
     embedding_provider: EmbeddingProvider
     embedding_model: EmbeddingModel
@@ -253,5 +254,49 @@ class CreateDocumentVersionRequest(BaseModel):
     chunk_overlap: int = 200
 
 
-class DeprecateVersionRequest(BaseModel):
-    reason: str  # Required reason for deprecation 
+class ArchiveVersionRequest(BaseModel):
+    reason: str  # Required reason for archiving
+
+
+class DocumentBase(BaseModel):
+    name: str
+    description: str | None = None
+
+
+class DocumentOut(DocumentBase):
+    id: str
+    knowledge_base_id: str
+    file_name: str
+    mime_type: str
+    file_size: int
+    chunk_count: int
+    status: DocumentStatus
+    created_at: datetime
+    updated_at: datetime
+    error_message: str | None = None
+    processing_progress: int | None = None
+    version_count: int = 0
+    latest_version_number: int | None = None
+    
+    class Config:
+        from_attributes = True
+
+
+class DocumentVersionBase(BaseModel):
+    change_description: str | None = None
+    
+
+class DocumentVersionOut(DocumentVersionBase):
+    id: str
+    document_id: str
+    version_number: str
+    file_path: str | None = None
+    file_size: int | None = None
+    chunk_count: int
+    status: DocumentStatus
+    is_archived: bool
+    archive_reason: str | None = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True 

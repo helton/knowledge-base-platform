@@ -11,7 +11,7 @@ from .models import (
     ProjectList, KnowledgeBaseList, DocumentList, DocumentVersionList, 
     KnowledgeBaseVersionList, ProcessingStatus, CreateKnowledgeBaseRequest,
     CreateVersionRequest, UploadDocumentRequest, CreateDocumentVersionRequest,
-    DeprecateVersionRequest, User, UserRole, AccessLevel, ProjectUser
+    ArchiveVersionRequest, User, UserRole, AccessLevel, ProjectUser
 )
 from .data import (
     get_all_projects, get_project_by_id, get_knowledge_bases_by_project,
@@ -19,8 +19,8 @@ from .data import (
     get_documents_by_project, get_document_by_id, get_document_versions_by_document,
     get_document_version_by_id, process_document, create_knowledge_base,
     create_knowledge_base_version, create_document, create_document_version,
-    deprecate_knowledge_base_version, deprecate_document_version,
-    deprecate_document_version_with_reason, set_primary_knowledge_base, 
+    archive_knowledge_base_version, archive_document_version,
+    archive_document_version_with_reason, set_primary_knowledge_base, 
     get_all_users, get_documents_by_kb, get_latest_document_version,
     get_active_document_versions
 )
@@ -196,23 +196,23 @@ async def get_version(kb_id: str, version_id: str):
     return version
 
 
-@app.put("/api/knowledge-bases/{kb_id}/versions/{version_id}/deprecate", tags=["Versions"])
-async def deprecate_kb_version(kb_id: str, version_id: str):
-    """Deprecate a knowledge base version"""
+@app.put("/api/knowledge-bases/{kb_id}/versions/{version_id}/archive", tags=["Versions"])
+async def archive_kb_version(kb_id: str, version_id: str):
+    """Archive a knowledge base version"""
     # Verify knowledge base exists
     knowledge_base = get_knowledge_base_by_id(kb_id)
     if not knowledge_base:
         raise HTTPException(status_code=404, detail="Knowledge base not found")
     
-    success = deprecate_knowledge_base_version(version_id)
+    success = archive_knowledge_base_version(version_id)
     if not success:
         raise HTTPException(status_code=404, detail="Version not found")
     
-    return {"message": "Version deprecated successfully"}
+    return {"message": "Version archived successfully"}
 
 
 # Document endpoints
-@app.get("/api/knowledge-bases/{kb_id}/documents", response_model=DocumentList, tags=["Documents"])
+@app.get("/api/knowledge-bases/{kb_id}/documents", response_model=List[Document], tags=["Documents"])
 async def get_kb_documents(kb_id: str):
     """Get all documents for a specific knowledge base"""
     # Verify knowledge base exists
@@ -220,8 +220,8 @@ async def get_kb_documents(kb_id: str):
     if not knowledge_base:
         raise HTTPException(status_code=404, detail="Knowledge base not found")
     
-    documents = get_documents_by_kb(kb_id)
-    return DocumentList(documents=documents)
+    docs = storage.get_documents_by_kb(kb_id)
+    return docs
 
 
 @app.post("/api/knowledge-bases/{kb_id}/documents/upload", tags=["Documents"])
@@ -297,7 +297,7 @@ async def get_document(doc_id: str):
     return document
 
 
-@app.get("/api/documents/{doc_id}/versions", response_model=DocumentVersionList, tags=["Documents"])
+@app.get("/api/documents/{doc_id}/versions", response_model=List[DocumentVersion], tags=["Documents"])
 async def get_document_versions(doc_id: str):
     """Get all versions for a specific document"""
     # Verify document exists
@@ -306,7 +306,7 @@ async def get_document_versions(doc_id: str):
         raise HTTPException(status_code=404, detail="Document not found")
     
     versions = get_document_versions_by_document(doc_id)
-    return DocumentVersionList(document_versions=versions)
+    return versions
 
 
 @app.get("/api/documents/{doc_id}/versions/{version_id}", response_model=DocumentVersion, tags=["Documents"])
@@ -324,39 +324,39 @@ async def get_document_version(doc_id: str, version_id: str):
     return version
 
 
-@app.put("/api/documents/{doc_id}/versions/{version_id}/deprecate", tags=["Documents"])
-async def deprecate_doc_version(doc_id: str, version_id: str):
-    """Deprecate a document version"""
+@app.put("/api/documents/{doc_id}/versions/{version_id}/archive", tags=["Documents"])
+async def archive_doc_version(doc_id: str, version_id: str):
+    """Archive a document version"""
     # Verify document exists
     document = get_document_by_id(doc_id)
     if not document:
         raise HTTPException(status_code=404, detail="Document not found")
     
-    success = deprecate_document_version(version_id)
+    success = archive_document_version(version_id)
     if not success:
         raise HTTPException(status_code=404, detail="Version not found")
     
-    return {"message": "Version deprecated successfully"}
+    return {"message": "Version archived successfully"}
 
 
-@app.put("/api/documents/{doc_id}/versions/{version_id}/deprecate-with-reason", tags=["Documents"])
-async def deprecate_doc_version_with_reason(doc_id: str, version_id: str, request: DeprecateVersionRequest):
-    """Deprecate a document version with a reason"""
+@app.put("/api/documents/{doc_id}/versions/{version_id}/archive-with-reason", tags=["Documents"])
+async def archive_doc_version_with_reason(doc_id: str, version_id: str, request: ArchiveVersionRequest):
+    """Archive a document version with a reason"""
     # Verify document exists
     document = get_document_by_id(doc_id)
     if not document:
         raise HTTPException(status_code=404, detail="Document not found")
     
-    # For now, use the first user as deprecator. In a real app, you'd get this from auth
+    # For now, use the first user as archivist. In a real app, you'd get this from auth
     users = get_all_users()
     if not users:
         raise HTTPException(status_code=500, detail="No users available")
     
-    success = deprecate_document_version_with_reason(version_id, request.reason, users[0].id)
+    success = archive_document_version_with_reason(version_id, request.reason, users[0].id)
     if not success:
         raise HTTPException(status_code=404, detail="Version not found")
     
-    return {"message": "Version deprecated successfully", "reason": request.reason}
+    return {"message": "Version archived successfully", "reason": request.reason}
 
 
 @app.post("/api/documents/{doc_id}/versions", tags=["Documents"])
@@ -435,7 +435,7 @@ async def get_latest_document_version_endpoint(doc_id: str):
 
 @app.get("/api/documents/{doc_id}/versions/active", response_model=DocumentVersionList, tags=["Documents"])
 async def get_active_document_versions_endpoint(doc_id: str):
-    """Get all active (non-deprecated) versions of a document"""
+    """Get all active (non-archived) versions of a document"""
     # Verify document exists
     document = get_document_by_id(doc_id)
     if not document:
@@ -486,6 +486,20 @@ async def create_project(request: dict):
     
     project = storage.create_project(project_data)
     return project
+
+
+@app.patch("/api/documents/{doc_id}/description", response_model=Document, tags=["Documents"])
+async def update_document_description_endpoint(doc_id: str, payload: dict):
+    """Updates a document's description."""
+    description = payload.get("description")
+    if description is None:
+        raise HTTPException(status_code=400, detail="Description not provided")
+    
+    updated_doc = storage.update_document_description(doc_id, description)
+    if not updated_doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+        
+    return updated_doc
 
 
 if __name__ == "__main__":

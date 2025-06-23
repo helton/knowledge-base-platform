@@ -1,7 +1,7 @@
 [
   {
     "id": "76e3f912-4d20-4a71-ad2b-b02886a5c8c2",
-    "name": "Default Project",
+    "name": "Project 1",
     "description": "A default project to get you started",
     "status": "active",
     "access_token": "default_token_123",
@@ -18,7 +18,7 @@
   },
   {
     "id": "2e604820-360e-41d1-8c9d-39d733c292d2",
-    "name": "Teste",
+    "name": "Project 2",
     "description": "asdjakldjas",
     "status": "active",
     "access_token": "token_e0fd0d6e",
@@ -32,5 +32,22 @@
     "created_by": "4bb8e9e6-9302-4563-b2ad-76381459d45d",
     "created_at": "2025-06-22 17:36:01.070590",
     "updated_at": "2025-06-22 17:36:01.070590"
+  },
+  {
+    "id": "da3e7f11-de09-4f41-9b3e-094a102b4a75",
+    "name": "Default Project",
+    "description": "A default project to get you started",
+    "status": "active",
+    "access_token": "default_token_123",
+    "users": {
+      "4bb8e9e6-9302-4563-b2ad-76381459d45d": {
+        "user_id": "4bb8e9e6-9302-4563-b2ad-76381459d45d",
+        "role": "admin",
+        "joined_at": "2025-06-22 20:49:26.043609"
+      }
+    },
+    "created_by": "4bb8e9e6-9302-4563-b2ad-76381459d45d",
+    "created_at": "2025-06-22 20:49:26.043612",
+    "updated_at": "2025-06-22 20:49:26.043612"
   }
 ]

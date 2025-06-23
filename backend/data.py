@@ -56,7 +56,7 @@ def get_document_by_id(doc_id: str) -> Optional[Document]:
     return storage.get_document_by_id(doc_id)
 
 def get_document_versions_by_document(doc_id: str) -> List[DocumentVersion]:
-    return storage.get_document_versions_by_document(doc_id)
+    return storage.get_document_versions(doc_id)
 
 def get_document_version_by_id(version_id: str) -> Optional[DocumentVersion]:
     return storage.get_document_version_by_id(version_id)
@@ -173,11 +173,11 @@ def create_document_version(doc_id: str, version_data: dict, created_by: str) ->
     
     return storage.create_document_version(version_info)
 
-# Deprecate functions
-def deprecate_knowledge_base_version(version_id: str) -> bool:
+# Archive functions
+def archive_knowledge_base_version(version_id: str) -> bool:
     version = storage.get_version_by_id(version_id)
     if version:
-        version.status = VersionStatus.DEPRECATED
+        version.status = VersionStatus.ARCHIVED
         version.updated_at = datetime.now()
         # Update in storage
         storage._kb_versions[version_id] = version
@@ -185,10 +185,10 @@ def deprecate_knowledge_base_version(version_id: str) -> bool:
         return True
     return False
 
-def deprecate_document_version(version_id: str) -> bool:
+def archive_document_version(version_id: str) -> bool:
     version = storage.get_document_version_by_id(version_id)
     if version:
-        version.status = DocumentStatus.DEPRECATED
+        version.status = DocumentStatus.ARCHIVED
         version.updated_at = datetime.now()
         # Update in storage
         storage._document_versions[version_id] = version
@@ -196,9 +196,9 @@ def deprecate_document_version(version_id: str) -> bool:
         return True
     return False
 
-def deprecate_document_version_with_reason(version_id: str, reason: str, deprecated_by: str) -> bool:
-    """Deprecate a document version with a reason"""
-    return storage.deprecate_document_version(version_id, reason, deprecated_by)
+def archive_document_version_with_reason(version_id: str, reason: str, archived_by: str) -> bool:
+    """Archive a document version with a reason"""
+    return storage.archive_document_version(version_id, reason, archived_by)
 
 # Set primary knowledge base
 def set_primary_knowledge_base(kb_id: str) -> bool:

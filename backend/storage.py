@@ -316,12 +316,28 @@ class Storage:
         self._save_all()
         return kb
     
-    # Document methods
     def get_documents_by_kb(self, kb_id: str) -> List[Document]:
-        return [
-            doc for doc in self._documents.values()
-            if doc.knowledge_base_id == kb_id
-        ]
+        """Gets all documents for a given knowledge base and enriches them with version info."""
+        docs = [doc for doc in self._documents.values() if doc.knowledge_base_id == kb_id]
+        for doc in docs:
+            versions = self.get_document_versions(doc.id)
+            doc.version_count = len(versions)
+            if versions:
+                # Extract numeric part from version strings like "v1", "v2", "v3"
+                version_numbers = []
+                for v in versions:
+                    if v.version_number.startswith('v'):
+                        try:
+                            version_numbers.append(int(v.version_number[1:]))
+                        except ValueError:
+                            continue
+                if version_numbers:
+                    doc.latest_version_number = max(version_numbers)
+                else:
+                    doc.latest_version_number = 0
+            else:
+                doc.latest_version_number = 0
+        return sorted(docs, key=lambda d: d.created_at, reverse=True)
     
     def get_document_by_id(self, doc_id: str) -> Optional[Document]:
         return self._documents.get(doc_id)
@@ -332,8 +348,18 @@ class Storage:
         self._save_all()
         return doc
     
+    def update_document_description(self, doc_id: str, description: str) -> Optional[Document]:
+        """Updates the description of a specific document."""
+        if doc_id in self._documents:
+            self._documents[doc_id].description = description
+            self._documents[doc_id].updated_at = datetime.now()
+            self._save_all()
+            return self._documents[doc_id]
+        return None
+    
     # Version methods
     def get_versions_by_knowledge_base(self, kb_id: str) -> List[KnowledgeBaseVersion]:
+        kb = self.get_knowledge_base_by_id(kb_id)
         return [
             version for version in self._kb_versions.values()
             if version.knowledge_base_id == kb_id
@@ -348,18 +374,17 @@ class Storage:
         self._save_all()
         return version
     
-    def get_document_versions_by_document(self, doc_id: str) -> List[DocumentVersion]:
-        return [
-            version for version in self._document_versions.values()
-            if version.document_id == doc_id
-        ]
+    def get_document_versions(self, doc_id: str) -> List[DocumentVersion]:
+        """Gets all versions for a given document, sorted from newest to oldest."""
+        versions = [v for v in self._document_versions.values() if v.document_id == doc_id]
+        return sorted(versions, key=lambda v: v.version_number, reverse=True)
     
     def get_document_version_by_id(self, version_id: str) -> Optional[DocumentVersion]:
         return self._document_versions.get(version_id)
     
     def get_latest_document_version(self, doc_id: str) -> Optional[DocumentVersion]:
         """Get the latest (highest version number) document version"""
-        versions = self.get_document_versions_by_document(doc_id)
+        versions = self.get_document_versions(doc_id)
         if not versions:
             return None
         
@@ -369,7 +394,7 @@ class Storage:
     
     def get_next_version_number(self, doc_id: str) -> str:
         """Generate the next version number for a document (v1, v2, v3, etc.)"""
-        versions = self.get_document_versions_by_document(doc_id)
+        versions = self.get_document_versions(doc_id)
         if not versions:
             return "v1"
         
@@ -391,27 +416,27 @@ class Storage:
         self._save_all()
         return version
     
-    def deprecate_document_version(self, version_id: str, reason: str, deprecated_by: str) -> bool:
-        """Deprecate a document version with a reason"""
+    def archive_document_version(self, version_id: str, reason: str, archived_by: str) -> bool:
+        """Archive a document version with a reason"""
         version = self.get_document_version_by_id(version_id)
         if not version:
             return False
         
-        version.is_deprecated = True
-        version.deprecation_reason = reason
-        version.deprecated_at = datetime.now()
-        version.deprecated_by = deprecated_by
-        version.status = DocumentStatus.DEPRECATED
+        version.is_archived = True
+        version.archive_reason = reason
+        version.archived_at = datetime.now()
+        version.archived_by = archived_by
+        version.status = DocumentStatus.ARCHIVED
         version.updated_at = datetime.now()
         
         self._save_all()
         return True
     
     def get_active_document_versions(self, doc_id: str) -> List[DocumentVersion]:
-        """Get all non-deprecated document versions"""
+        """Get all non-archived document versions"""
         return [
-            version for version in self.get_document_versions_by_document(doc_id)
-            if not version.is_deprecated
+            version for version in self.get_document_versions(doc_id)
+            if not version.is_archived
         ]
 
 

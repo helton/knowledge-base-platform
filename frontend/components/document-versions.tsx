@@ -12,7 +12,9 @@ import {
   Trash2,
   UploadCloud,
   XCircle,
-  ArrowLeft
+  ArrowLeft,
+  Archive,
+  Inbox
 } from 'lucide-react'
 
 interface DocumentVersionsProps {
@@ -24,6 +26,7 @@ interface DocumentVersionsProps {
 export function DocumentVersions({ document, onVersionSelect, onBack }: DocumentVersionsProps) {
   const [versions, setVersions] = useState<DocumentVersion[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [showArchived, setShowArchived] = useState(false)
   
   // Modal states
   const [showAddVersionModal, setShowAddVersionModal] = useState(false)
@@ -41,7 +44,7 @@ export function DocumentVersions({ document, onVersionSelect, onBack }: Document
   const loadDocumentVersions = async () => {
     setIsLoading(true)
     try {
-      const versionData = await apiClient.getActiveDocumentVersions(document.id)
+      const versionData = await apiClient.getDocumentVersions(document.id)
       setVersions(versionData)
     } catch (error) {
       console.error('Failed to load document versions:', error)
@@ -110,20 +113,36 @@ export function DocumentVersions({ document, onVersionSelect, onBack }: Document
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
   }
 
+  const filteredVersions = versions.filter((v: DocumentVersion) => showArchived ? v.is_archived : !v.is_archived)
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-end justify-between">
         <div>
           <button onClick={onBack} className="flex items-center text-sm font-medium text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 mb-2">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Documents
           </button>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Versions for: {document.name}</h2>
+          <div className="flex items-center gap-4">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Versions for: {document.name}</h2>
+            <div className="flex items-center space-x-1 rounded-md bg-gray-200 dark:bg-gray-800 p-1">
+              <button onClick={() => setShowArchived(false)} className={`px-2 py-1 text-sm rounded-md flex items-center ${!showArchived ? 'bg-white dark:bg-gray-700 shadow-sm' : 'text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200'}`}>
+                <Inbox className="mr-2 h-4 w-4" />
+                Active
+              </button>
+              <button onClick={() => setShowArchived(true)} className={`px-2 py-1 text-sm rounded-md flex items-center ${showArchived ? 'bg-white dark:bg-gray-700 shadow-sm' : 'text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200'}`}>
+                <Archive className="mr-2 h-4 w-4" />
+                Archived
+              </button>
+            </div>
+          </div>
         </div>
-        <button onClick={() => setShowAddVersionModal(true)} className="btn btn-primary">
-          <Plus className="mr-2 h-4 w-4" />
-          Add New Version
-        </button>
+        {!showArchived && (
+          <button onClick={() => setShowAddVersionModal(true)} className="btn btn-primary">
+            <Plus className="mr-2 h-4 w-4" />
+            Add New Version
+          </button>
+        )}
       </div>
 
       {isLoading ? (
@@ -132,7 +151,7 @@ export function DocumentVersions({ document, onVersionSelect, onBack }: Document
         </div>
       ) : (
         <div className="space-y-3">
-          {versions.map((version) => (
+          {filteredVersions.map((version) => (
             <div key={version.id} className="p-4 rounded-lg border bg-white dark:bg-gray-800/60">
               <div className="flex justify-between items-start mb-3">
                 <div className="flex-1">
@@ -144,8 +163,24 @@ export function DocumentVersions({ document, onVersionSelect, onBack }: Document
                       <div className="flex items-center text-green-500 text-xs"><CheckCircle2 className="mr-1.5 h-3 w-3" />Completed</div>
                     ) : version.status === 'failed' ? (
                       <div className="flex items-center text-red-500 text-xs"><XCircle className="mr-1.5 h-3 w-3" />Failed</div>
+                    ) : version.status === 'archived' ? (
+                      <div className="flex items-center text-gray-500 text-xs"><Archive className="mr-1.5 h-3 w-3" />Archived</div>
                     ) : null}
                   </div>
+
+                  {showArchived && version.archive_reason && (
+                    <div className="mt-2 mb-2 p-3 rounded-lg bg-gray-50 dark:bg-gray-900">
+                      <p className="text-sm text-gray-800 dark:text-gray-200">
+                        <span className="font-semibold">Reason for archival:</span> {version.archive_reason}
+                      </p>
+                      {version.archived_at && (
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                          Archived on {new Date(version.archived_at).toLocaleDateString()}
+                        </p>
+                      )}
+                    </div>
+                  )}
+
                   {version.change_description && (<p className="text-sm text-gray-600 dark:text-gray-400 mb-2">{version.change_description}</p>)}
                   <div className="flex items-center space-x-4 text-xs text-gray-500 dark:text-gray-400 mb-3">
                     <span className="flex items-center space-x-1.5">{version.source_url ? <Globe className="w-4 h-4" /> : <UploadCloud className="w-4 h-4" />}<span>{version.source_url ? 'URL' : 'Upload'}</span></span>
@@ -154,12 +189,14 @@ export function DocumentVersions({ document, onVersionSelect, onBack }: Document
                     <span>{new Date(version.created_at).toLocaleDateString()}</span>
                   </div>
                 </div>
-                <button 
-                    onClick={() => { setSelectedVersion(version); onVersionSelect(version); setShowArchiveVersionModal(true); }} 
-                    className="p-1.5 text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400" 
-                    title="Archive version">
-                      <Trash2 className="w-4 h-4" />
-                </button>
+                {!showArchived && (
+                  <button 
+                      onClick={() => { setSelectedVersion(version); onVersionSelect(version); setShowArchiveVersionModal(true); }} 
+                      className="p-1.5 text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400" 
+                      title="Archive version">
+                        <Trash2 className="w-4 h-4" />
+                  </button>
+                )}
               </div>
             </div>
           ))}

@@ -27,7 +27,23 @@
     "error_message": null,
     "created_by": "4bb8e9e6-9302-4563-b2ad-76381459d45d",
     "created_at": "2025-06-22 23:55:47.999379",
-    "updated_at": "2025-06-22 23:55:52.028424",
+    "updated_at": "2025-06-23 00:58:28.877197",
+    "version_count": 2,
+    "latest_version_number": 2
+  },
+  {
+    "id": "efd8dcf2-2795-4b65-9332-1f313800d9b6",
+    "name": "alimentos_equivalentes.pdf",
+    "description": "asdadsa",
+    "knowledge_base_id": "62a84912-754b-4b13-b113-95600092cf8c",
+    "status": "completed",
+    "source_url": null,
+    "processing_stage": "embed",
+    "processing_progress": 1.0,
+    "error_message": null,
+    "created_by": "4bb8e9e6-9302-4563-b2ad-76381459d45d",
+    "created_at": "2025-06-23 00:59:26.494659",
+    "updated_at": "2025-06-23 00:59:41.267242",
     "version_count": 1,
     "latest_version_number": 1
   }

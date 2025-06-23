@@ -1,78 +1,79 @@
 [
   {
-    "id": "e73f2fcc-0957-485f-8180-5a33b52a50df",
+    "id": "29118e0c-aadb-4bf0-9dd1-ca345569edde",
     "knowledge_base_id": "62a84912-754b-4b13-b113-95600092cf8c",
     "version_number": "1.0.0",
-    "version_name": "",
-    "release_notes": "xxxx",
-    "status": "published",
-    "access_level": "private",
-    "is_primary": false,
-    "document_version_ids": [
-      "702224cb-cf5c-476e-ad5e-9b5658265035"
-    ],
-    "created_by": "user1",
-    "created_at": "2025-06-23 12:30:35.531417",
-    "updated_at": "2025-06-23 12:31:39.464972",
-    "published_by": "user1",
-    "published_at": "2025-06-23 12:31:39.464954",
-    "archived_by": null,
-    "archived_at": null
-  },
-  {
-    "id": "827ca55f-d3f8-447b-97bb-67a6b10ccbbb",
-    "knowledge_base_id": "62a84912-754b-4b13-b113-95600092cf8c",
-    "version_number": "1.0.1",
-    "version_name": "",
-    "release_notes": "",
-    "status": "published",
-    "access_level": "private",
-    "is_primary": false,
-    "document_version_ids": [
-      "1e8bb6a6-b18e-4b03-97e9-ca5490dd7578"
-    ],
-    "created_by": "user1",
-    "created_at": "2025-06-23 12:31:07.193819",
-    "updated_at": "2025-06-23 12:31:40.135241",
-    "published_by": "user1",
-    "published_at": "2025-06-23 12:31:40.135236",
-    "archived_by": null,
-    "archived_at": null
-  },
-  {
-    "id": "de387130-408f-4bc0-b187-6c5b60b225e2",
-    "knowledge_base_id": "62a84912-754b-4b13-b113-95600092cf8c",
-    "version_number": "2.0.0",
-    "version_name": "",
-    "release_notes": "asdasdas",
+    "version_name": "First Release 123",
+    "release_notes": "AAAA",
     "status": "published",
     "access_level": "protected",
     "is_primary": false,
     "document_version_ids": [
-      "e01010e4-d498-4741-b0a5-293c3c926554"
+      "35954b24-f821-4f0f-a6de-c93845f75d75"
     ],
     "created_by": "user1",
-    "created_at": "2025-06-23 12:31:22.041330",
-    "updated_at": "2025-06-23 12:31:40.757806",
+    "created_at": "2025-06-23 12:40:36.044151",
+    "updated_at": "2025-06-23 12:45:25.682468",
     "published_by": "user1",
-    "published_at": "2025-06-23 12:31:40.757800",
+    "published_at": "2025-06-23 12:45:25.682453",
     "archived_by": null,
     "archived_at": null
   },
   {
-    "id": "388e45a3-011d-4fe9-b023-38302e1bd45c",
+    "id": "2d596e6f-005e-4558-83c4-3b783ccedf54",
     "knowledge_base_id": "62a84912-754b-4b13-b113-95600092cf8c",
-    "version_number": "2.0.1",
-    "version_name": "",
+    "version_number": "1.0.1",
+    "version_name": "First Release",
+    "release_notes": "",
+    "status": "published",
+    "access_level": "public",
+    "is_primary": false,
+    "document_version_ids": [
+      "7fac8b49-3876-414e-8eb4-19818ba60f7b"
+    ],
+    "created_by": "user1",
+    "created_at": "2025-06-23 12:46:01.848935",
+    "updated_at": "2025-06-23 12:46:20.465792",
+    "published_by": "user1",
+    "published_at": "2025-06-23 12:46:20.465787",
+    "archived_by": null,
+    "archived_at": null
+  },
+  {
+    "id": "90470b56-5006-4672-8daf-79f78bb41378",
+    "knowledge_base_id": "62a84912-754b-4b13-b113-95600092cf8c",
+    "version_number": "1.1.0",
+    "version_name": "First Release",
+    "release_notes": "",
+    "status": "published",
+    "access_level": "protected",
+    "is_primary": true,
+    "document_version_ids": [
+      "35954b24-f821-4f0f-a6de-c93845f75d75"
+    ],
+    "created_by": "user1",
+    "created_at": "2025-06-23 12:46:32.189094",
+    "updated_at": "2025-06-23 12:48:01.609159",
+    "published_by": "user1",
+    "published_at": "2025-06-23 12:47:01.996109",
+    "archived_by": null,
+    "archived_at": null
+  },
+  {
+    "id": "1a77984e-93a4-4c6d-82cb-db697445cae1",
+    "knowledge_base_id": "62a84912-754b-4b13-b113-95600092cf8c",
+    "version_number": "2.0.0",
+    "version_name": "First Release",
     "release_notes": "",
     "status": "draft",
     "access_level": "public",
     "is_primary": false,
     "document_version_ids": [
-      "1e8bb6a6-b18e-4b03-97e9-ca5490dd7578"
+      "2638c08f-cb57-4b0c-ba91-d6011983474e",
+      "7fac8b49-3876-414e-8eb4-19818ba60f7b"
     ],
     "created_by": "user1",
-    "created_at": "2025-06-23 12:31:50.701784",
+    "created_at": "2025-06-23 12:47:21.701071",
     "updated_at": null,
     "published_by": null,
     "published_at": null,

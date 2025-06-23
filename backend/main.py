@@ -292,4 +292,21 @@ def create_document_version_from_url(doc_id: str, request: CreateDocumentVersion
     )
     # Trigger processing in background
     threading.Thread(target=process_document, args=(doc_id, new_version.id), daemon=True).start()
-    return new_version 
+    return new_version
+
+@app.put("/api/knowledge-bases/{kb_id}/versions/{version_id}", response_model=KnowledgeBaseVersion, tags=["Versions"])
+def update_kb_version(kb_id: str, version_id: str, request: CreateKbVersionRequest):
+    user_id = "user1"  # Placeholder for auth
+    version = storage.get_version_by_id(version_id)
+    if not version or version.knowledge_base_id != kb_id:
+        raise HTTPException(status_code=404, detail="Version not found")
+    if version.status != "draft":
+        raise HTTPException(status_code=400, detail="Only draft versions can be updated")
+    # Update fields
+    version.version_name = request.version_name
+    version.release_notes = request.release_notes
+    version.access_level = request.access_level
+    version.document_version_ids = request.document_version_ids
+    version.updated_at = datetime.now()
+    storage.update_kb_version(version)
+    return version 

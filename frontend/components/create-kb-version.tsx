@@ -38,12 +38,20 @@ export function CreateKbVersion({ kb, draftVersion, onVersionCreated, onCancel }
 
   // Helper: get the last version number from previous KB versions (excluding drafts)
   const [lastVersion, setLastVersion] = useState<string>('1.0.0')
+  const [hasAnyVersion, setHasAnyVersion] = useState<boolean>(false)
+  const [isFirstDraft, setIsFirstDraft] = useState<boolean>(false)
   useEffect(() => {
     async function fetchLastVersion() {
       const kbVersions = await apiClient.getKnowledgeBaseVersions(kb.id)
-      const published = kbVersions.filter(v => v.status !== 'draft')
+      const published = kbVersions.filter(v => v.status === 'published')
+      setHasAnyVersion(kbVersions.length > 0)
+      // If the only version is a draft and it's the one being edited, treat as first draft
+      if (kbVersions.length === 1 && kbVersions[0].status === 'draft' && draftVersion && kbVersions[0].id === draftVersion.id) {
+        setIsFirstDraft(true)
+      } else {
+        setIsFirstDraft(false)
+      }
       if (published.length > 0) {
-        // Sort by version_number descending
         published.sort((a, b) => (b.version_number || '').localeCompare(a.version_number || ''))
         setLastVersion(published[0].version_number || '1.0.0')
       } else {
@@ -51,7 +59,7 @@ export function CreateKbVersion({ kb, draftVersion, onVersionCreated, onCancel }
       }
     }
     fetchLastVersion()
-  }, [kb.id])
+  }, [kb.id, draftVersion])
 
   // Helper: calculate next version numbers
   function getNextVersionNumbers(current: string) {
@@ -64,8 +72,8 @@ export function CreateKbVersion({ kb, draftVersion, onVersionCreated, onCancel }
   }
   const nextVersions = getNextVersionNumbers(lastVersion)
 
-  // Determine if this is the first release (no previous versions)
-  const isFirstRelease = !draftVersion && documents.length > 0 && Object.values(documentVersions).flat().length === 0;
+  // Determine if this is the first release (no previous versions at all)
+  const isFirstRelease = !hasAnyVersion
 
   // If first release, set defaults and lock fields
   useEffect(() => {
@@ -100,27 +108,19 @@ export function CreateKbVersion({ kb, draftVersion, onVersionCreated, onCancel }
         // Check existing KB versions to determine initial version and prevent multiple drafts
         const kbVersions = await apiClient.getKnowledgeBaseVersions(kb.id)
         const existingDraft = kbVersions.find(v => v.status === 'draft')
-        
-        if (existingDraft) {
+        // Only allow creating a draft if none exists
+        if (!draftVersion && existingDraft) {
           setError('A draft version already exists. Please publish or archive the existing draft before creating a new one.')
+          setIsLoading(false)
           return
-        }
-
-        // Set initial version bump based on existing versions
-        if (kbVersions.length === 0) {
-          setVersionBump('patch') // First version will be 1.0.0
-        } else {
-          setVersionBump('patch') // Default to patch for subsequent versions
         }
 
         if (draftVersion) {
           setVersionName(draftVersion.version_name || '')
           setReleaseNotes(draftVersion.release_notes || '')
           setAccessLevel(draftVersion.access_level || 'private')
-          
           // Robust mapping: for each document_version_id, find the corresponding document and set mapping
           const selected: Record<string, string> = {}
-          // Fetch all document versions for the draft's document_version_ids
           await Promise.all(draftVersion.document_version_ids.map(async (versionId) => {
             try {
               const version = await apiClient.getDocumentVersion(versionId)
@@ -233,14 +233,14 @@ export function CreateKbVersion({ kb, draftVersion, onVersionCreated, onCancel }
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium mb-1">Version</label>
-              {isFirstRelease ? (
+              {(isFirstRelease || isFirstDraft) ? (
                 <div className="w-full px-3 py-2 border rounded-md bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200">v1.0.0</div>
               ) : (
                 <select
                   value={versionBump}
                   onChange={(e) => setVersionBump(e.target.value as 'major' | 'minor' | 'patch')}
                   className="w-full px-3 py-2 border rounded-md"
-                  disabled={documents.length === 0}
+                  disabled={documents.length === 0 || !!draftVersion}
                 >
                   <option value="patch">{nextVersions.patch}</option>
                   <option value="minor">{nextVersions.minor}</option>

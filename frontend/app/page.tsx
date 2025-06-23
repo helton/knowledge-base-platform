@@ -9,8 +9,9 @@ import { Settings } from '@/components/settings'
 import { KnowledgeBase, Project, Document, DocumentVersion } from '@/lib/api-client'
 import { apiClient } from '@/lib/api-client'
 import { CreateKnowledgeBase } from '@/components/create-knowledge-base'
+import { DocumentVersions } from '@/components/document-versions'
 
-type ActiveView = 'kbs' | 'documents' | 'settings' | 'create_kb'
+type ActiveView = 'kbs' | 'documents' | 'settings' | 'create_kb' | 'document_versions'
 
 export default function Page() {
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null)
@@ -27,6 +28,15 @@ export default function Page() {
       setProject(null)
     }
   }, [selectedProjectId])
+
+  useEffect(() => {
+    // When switching to a project-level view, reset the rest of the breadcrumb chain
+    if (activeView === 'kbs' || activeView === 'create_kb' || activeView === 'settings') {
+      setSelectedKb(null)
+      setSelectedDocument(null)
+      setSelectedDocumentVersion(null)
+    }
+  }, [activeView])
 
   const loadProject = async (projectId: string) => {
     try {
@@ -50,6 +60,17 @@ export default function Page() {
     setSelectedDocument(null)
     setSelectedDocumentVersion(null)
     setActiveView('documents')
+  }
+
+  const handleDocumentSelect = (doc: Document) => {
+    setSelectedDocument(doc)
+    setActiveView('document_versions')
+  }
+
+  const handleBackToDocuments = () => {
+    setActiveView('documents')
+    setSelectedDocument(null)
+    setSelectedDocumentVersion(null)
   }
 
   const handleProjectClick = () => {
@@ -109,8 +130,14 @@ export default function Page() {
           {activeView === 'documents' && selectedKb && (
             <Documents 
               selectedKb={selectedKb}
-              onDocumentSelect={setSelectedDocument}
-              onDocumentVersionSelect={setSelectedDocumentVersion}
+              onDocumentSelect={handleDocumentSelect}
+            />
+          )}
+          {activeView === 'document_versions' && selectedDocument && (
+            <DocumentVersions
+              document={selectedDocument}
+              onVersionSelect={setSelectedDocumentVersion}
+              onBack={handleBackToDocuments}
             />
           )}
           {activeView === 'settings' && <Settings kbId={selectedKb?.id || null} />}

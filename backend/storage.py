@@ -419,25 +419,20 @@ class Storage:
     def archive_document_version(self, version_id: str, reason: str, archived_by: str) -> bool:
         """Archive a document version with a reason"""
         version = self.get_document_version_by_id(version_id)
-        if not version:
-            return False
-        
-        version.is_archived = True
-        version.archive_reason = reason
-        version.archived_at = datetime.now()
-        version.archived_by = archived_by
-        version.status = DocumentStatus.ARCHIVED
-        version.updated_at = datetime.now()
-        
-        self._save_all()
-        return True
+        if version:
+            version.is_archived = True
+            version.archive_reason = reason
+            version.archived_by = archived_by
+            version.archived_at = datetime.now()
+            version.updated_at = datetime.now()
+            self._save_all()
+            return True
+        return False
     
     def get_active_document_versions(self, doc_id: str) -> List[DocumentVersion]:
-        """Get all non-archived document versions"""
-        return [
-            version for version in self.get_document_versions(doc_id)
-            if not version.is_archived
-        ]
+        """Returns all non-archived versions for a given document."""
+        all_versions = self.get_document_versions(doc_id)
+        return [v for v in all_versions if not v.is_archived]
 
 
 # Global storage instance

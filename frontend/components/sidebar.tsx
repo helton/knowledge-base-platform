@@ -3,7 +3,7 @@
 import { apiClient, KnowledgeBase } from '@/lib/api-client'
 import { Dispatch, SetStateAction } from 'react'
 
-type ActiveView = 'kbs' | 'documents' | 'settings' | 'create_kb'
+type ActiveView = 'kbs' | 'documents' | 'settings' | 'create_kb' | 'document_versions'
 
 interface SidebarProps {
   projectId: string | null

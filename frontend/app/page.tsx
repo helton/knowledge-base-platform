@@ -119,6 +119,7 @@ export default function Page() {
             <KnowledgeBases 
               projectId={selectedProjectId} 
               onKbSelect={handleKbSelect}
+              onSelectView={setActiveView}
             />
           )}
           {activeView === 'create_kb' && selectedProjectId && (

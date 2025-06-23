@@ -2,13 +2,18 @@
 
 import { useState, useEffect } from 'react'
 import { apiClient, KnowledgeBase } from '@/lib/api-client'
+import { Plus, BookOpen } from 'lucide-react'
+import { Dispatch, SetStateAction } from 'react'
+
+type ActiveView = 'kbs' | 'documents' | 'settings' | 'create_kb' | 'document_versions'
 
 interface KnowledgeBasesProps {
   projectId: string
   onKbSelect: (kb: KnowledgeBase) => void
+  onSelectView: Dispatch<SetStateAction<ActiveView>>
 }
 
-export function KnowledgeBases({ projectId, onKbSelect }: KnowledgeBasesProps) {
+export function KnowledgeBases({ projectId, onKbSelect, onSelectView }: KnowledgeBasesProps) {
   const [knowledgeBases, setKnowledgeBases] = useState<KnowledgeBase[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -103,10 +108,21 @@ export function KnowledgeBases({ projectId, onKbSelect }: KnowledgeBasesProps) {
         <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">📚 Knowledge Bases</h2>
       </div>
 
-      {knowledgeBases.length === 0 ? (
-        <div className="bg-white dark:bg-openai-dark-light border border-gray-200 dark:border-gray-700 rounded-lg p-8 text-center">
-          <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">No Knowledge Bases Found</h3>
-          <p className="text-gray-600 dark:text-gray-400">This project doesn't have any knowledge bases yet.</p>
+      {knowledgeBases.length === 0 && !isLoading ? (
+        <div className="flex flex-1 items-center justify-center h-full rounded-lg bg-gray-50 dark:bg-gray-800/50 p-8 text-center">
+          <div className="flex flex-col items-center gap-2">
+            <BookOpen className="h-16 w-16 mb-4 text-gray-400 dark:text-gray-500" />
+            <h3 className="text-2xl font-semibold mb-2">No Knowledge Bases Found</h3>
+            <p className="mb-4 max-w-md text-gray-500 dark:text-gray-400">
+              Get started by creating your first knowledge base for this project.
+            </p>
+            <button 
+              onClick={() => onSelectView('create_kb')} 
+              className="btn btn-primary"
+            >
+              <Plus className="mr-2 h-4 w-4" /> Create Knowledge Base
+            </button>
+          </div>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

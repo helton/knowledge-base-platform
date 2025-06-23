@@ -106,22 +106,19 @@ class Project(BaseModel):
 
 
 class Document(BaseModel):
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    id: str
     name: str
-    description: Optional[str] = None
-    file_path: str
-    file_size: int
-    mime_type: str
+    description: str
     knowledge_base_id: str
-    status: DocumentStatus = DocumentStatus.PENDING
+    status: DocumentStatus
+    source_url: Optional[str] = None
     processing_stage: Optional[ProcessingStage] = None
-    processing_progress: float = 0.0  # 0.0 to 1.0
+    processing_progress: Optional[float] = None
     error_message: Optional[str] = None
-    chunk_count: int = 0
-    embedding_count: int = 0
     created_by: str
-    created_at: datetime = Field(default_factory=datetime.now)
-    updated_at: datetime = Field(default_factory=datetime.now)
+    created_at: datetime
+    updated_at: datetime
+    # Frontend-only fields for enrichment
     version_count: Optional[int] = None
     latest_version_number: Optional[int] = None
 
@@ -146,6 +143,7 @@ class DocumentVersion(BaseModel):
     file_path: Optional[str] = None  # Path to the versioned file
     file_size: Optional[int] = None  # Size of the versioned file
     mime_type: Optional[str] = None  # MIME type of the versioned file
+    source_url: Optional[str] = None
     is_archived: bool = False
     archive_reason: Optional[str] = None  # Reason for archiving
     archived_at: Optional[datetime] = None
@@ -213,7 +211,7 @@ class ProcessingStatus(BaseModel):
     document_id: str
     status: DocumentStatus
     stage: Optional[ProcessingStage] = None
-    progress: float = 0.0
+    progress: Optional[float] = None
     error_message: Optional[str] = None
 
 
@@ -254,8 +252,19 @@ class CreateDocumentVersionRequest(BaseModel):
     chunk_overlap: int = 200
 
 
+class CreateDocumentFromUrlRequest(BaseModel):
+    url: str
+    name: Optional[str] = None
+    description: Optional[str] = None
+
+
+class CreateDocumentVersionFromUrlRequest(BaseModel):
+    url: str
+    change_description: Optional[str] = None
+
+
 class ArchiveVersionRequest(BaseModel):
-    reason: str  # Required reason for archiving
+    reason: str
 
 
 class DocumentBase(BaseModel):

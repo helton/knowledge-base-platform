@@ -114,7 +114,13 @@ def create_knowledge_base_version(kb_id: str, version_data: dict, created_by: st
     
     return storage.create_kb_version(version_info)
 
-def create_document(knowledge_base_id: str, name: str, description: str, file_path: str, file_size: int, mime_type: str, created_by: str) -> Document:
+def create_document(
+    knowledge_base_id: str, 
+    name: str, 
+    description: str, 
+    created_by: str,
+    source_url: Optional[str] = None
+) -> Document:
     import uuid
     from datetime import datetime
     
@@ -122,15 +128,11 @@ def create_document(knowledge_base_id: str, name: str, description: str, file_pa
         "id": str(uuid.uuid4()),
         "name": name,
         "description": description,
-        "file_path": file_path,
-        "file_size": file_size,
-        "mime_type": mime_type,
+        "source_url": source_url,
         "knowledge_base_id": knowledge_base_id,
         "status": DocumentStatus.PENDING,
         "processing_stage": ProcessingStage.DOWNLOAD,
         "processing_progress": 0.0,
-        "chunk_count": 0,
-        "embedding_count": 0,
         "created_by": created_by,
         "created_at": datetime.now(),
         "updated_at": datetime.now()
@@ -165,7 +167,8 @@ def create_document_version(doc_id: str, version_data: dict, created_by: str) ->
         "file_path": version_data.get("file_path"),
         "file_size": version_data.get("file_size"),
         "mime_type": version_data.get("mime_type"),
-        "is_deprecated": False,
+        "source_url": version_data.get("source_url"),
+        "is_archived": False,
         "created_by": created_by,
         "created_at": datetime.now(),
         "updated_at": datetime.now()
@@ -239,56 +242,32 @@ async def process_document(document_id: str, processing_config: dict, created_by
     # Update progress
     doc.processing_stage = ProcessingStage.CHUNK
     doc.processing_progress = 0.5
-    doc.chunk_count = 25
     doc.updated_at = datetime.now()
     storage._documents[document_id] = doc
     
     await asyncio.sleep(2)
     
-    # Complete processing
+    # Complete processing for the document
     doc.status = DocumentStatus.COMPLETED
     doc.processing_stage = ProcessingStage.EMBED
     doc.processing_progress = 1.0
-    doc.embedding_count = 25
     doc.updated_at = datetime.now()
     storage._documents[document_id] = doc
     
-    # Find the latest version and update it instead of creating a new one
+    # Find the latest version and update it with processing results
     latest_version = storage.get_latest_document_version(document_id)
     if latest_version:
-        # Update the existing version with processing results
         latest_version.status = DocumentStatus.COMPLETED
         latest_version.processing_stage = ProcessingStage.EMBED
         latest_version.processing_progress = 1.0
-        latest_version.chunk_count = 25
-        latest_version.embedding_count = 25
+        latest_version.chunk_count = 25 # Simulated
+        latest_version.embedding_count = 25 # Simulated
         latest_version.updated_at = datetime.now()
         
-        # Update in storage
         storage._document_versions[latest_version.id] = latest_version
         storage._save_all()
         
         return latest_version
     else:
-        # Fallback: create a version if none exists (shouldn't happen)
-        version_data = {
-            "id": str(uuid.uuid4()),
-            "document_id": document_id,
-            "version_number": "v1",
-            "status": DocumentStatus.COMPLETED,
-            "processing_stage": ProcessingStage.EMBED,
-            "processing_progress": 1.0,
-            "chunk_count": 25,
-            "embedding_count": 25,
-            "chunking_method": processing_config.get("chunking_method", ChunkingMethod.FIXED_SIZE),
-            "embedding_provider": processing_config.get("embedding_provider", EmbeddingProvider.OPENAI),
-            "embedding_model": processing_config.get("embedding_model", EmbeddingModel.TEXT_EMBEDDING_ADA_002),
-            "chunk_size": processing_config.get("chunk_size", 1000),
-            "chunk_overlap": processing_config.get("chunk_overlap", 200),
-            "created_by": created_by,
-            "created_at": datetime.now(),
-            "updated_at": datetime.now()
-        }
-        
-        version = storage.create_document_version(version_data)
-        return version 
+        # This case should ideally not be reached if versions are created properly
+        raise ValueError(f"No version found for document {document_id} to process.") 

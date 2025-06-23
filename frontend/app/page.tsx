@@ -46,7 +46,7 @@ export default function Page() {
             />
           )}
           {activeView === 'documents' && selectedKb && (
-            <Documents kbId={selectedKb.id} />
+            <Documents selectedKb={selectedKb} />
           )}
           {activeView === 'settings' && <Settings kbId={selectedKb?.id || null} />}
         </main>

@@ -11,6 +11,7 @@ from .models import (
     ProjectList, KnowledgeBaseList, DocumentList, DocumentVersionList, 
     KnowledgeBaseVersionList, ProcessingStatus, CreateKnowledgeBaseRequest,
     CreateVersionRequest, UploadDocumentRequest, CreateDocumentVersionRequest,
+    CreateDocumentFromUrlRequest, CreateDocumentVersionFromUrlRequest, 
     ArchiveVersionRequest, User, UserRole, AccessLevel, ProjectUser
 )
 from .data import (
@@ -248,21 +249,30 @@ async def upload_kb_document(
     if not users:
         raise HTTPException(status_code=500, detail="No users available")
     
-    # Create document record
+    creator_id = users[0].id
+
+    # 1. Create the parent Document
     doc = create_document(
         knowledge_base_id=kb_id,
         name=name,
         description=description or "",
-        file_path=f"/uploads/{file.filename}",
-        file_size=len(await file.read()),
-        mime_type=file.content_type or "application/octet-stream",
-        created_by=users[0].id
+        created_by=creator_id
     )
+
+    # 2. Create the first DocumentVersion with file metadata
+    file_content = await file.read()
+    version_data = {
+        "file_path": f"/uploads/{file.filename}", # In a real app, this would be a path from a file storage service
+        "file_size": len(file_content),
+        "mime_type": file.content_type or "application/octet-stream"
+    }
+    version = create_document_version(doc.id, version_data, creator_id)
     
     # Reset file position for background processing
     await file.seek(0)
     
-    # Add background task for processing
+    # 3. Add background task for processing the version
+    # Note: The processing task should ideally operate on a version_id
     processing_config = {
         "chunking_method": chunking_method,
         "embedding_provider": embedding_provider,
@@ -271,9 +281,42 @@ async def upload_kb_document(
         "chunk_overlap": chunk_overlap
     }
     
-    background_tasks.add_task(process_document, doc.id, processing_config, users[0].id)
+    background_tasks.add_task(process_document, doc.id, processing_config, creator_id)
     
-    return {"message": "Document uploaded and processing started", "document_id": doc.id}
+    return {"message": "Document uploaded and processing started", "document_id": doc.id, "version_id": version.id}
+
+
+@app.post("/api/knowledge-bases/{kb_id}/documents/from-url", tags=["Documents"])
+async def create_document_from_url(
+    kb_id: str,
+    request: CreateDocumentFromUrlRequest,
+    background_tasks: BackgroundTasks,
+):
+    """Create a document from a URL"""
+    knowledge_base = get_knowledge_base_by_id(kb_id)
+    if not knowledge_base:
+        raise HTTPException(status_code=404, detail="Knowledge base not found")
+    
+    users = get_all_users()
+    if not users:
+        raise HTTPException(status_code=500, detail="No users available to be creator")
+
+    # For now, use the first user as creator
+    creator_id = users[0].id
+
+    doc = create_document(
+        knowledge_base_id=kb_id,
+        name=request.name or request.url,
+        description=request.description or "",
+        source_url=request.url,
+        created_by=creator_id
+    )
+
+    # In a real app, you might pass chunking/embedding configs from the request
+    processing_config = {} 
+    background_tasks.add_task(process_document, doc.id, processing_config, creator_id)
+    
+    return {"message": "Document created from URL and processing started", "document_id": doc.id}
 
 
 @app.get("/api/projects/{project_id}/documents", response_model=DocumentList, tags=["Documents"])
@@ -500,6 +543,38 @@ async def update_document_description_endpoint(doc_id: str, payload: dict):
         raise HTTPException(status_code=404, detail="Document not found")
         
     return updated_doc
+
+
+@app.post("/api/documents/{doc_id}/versions/from-url", tags=["Documents"])
+async def create_document_version_from_url(
+    doc_id: str,
+    request: CreateDocumentVersionFromUrlRequest,
+    background_tasks: BackgroundTasks,
+):
+    """Create a new version of an existing document from a URL"""
+    document = get_document_by_id(doc_id)
+    if not document:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    users = get_all_users()
+    if not users:
+        raise HTTPException(status_code=500, detail="No users available")
+
+    creator_id = users[0].id
+
+    version_data = {
+        "source_url": request.url,
+        "change_description": request.change_description,
+    }
+    version = create_document_version(doc_id, version_data, creator_id)
+    
+    processing_config = {}
+    background_tasks.add_task(process_document, doc_id, processing_config, creator_id)
+    
+    return {
+        "message": "Document version from URL created and processing started",
+        "version_id": version.id
+    }
 
 
 if __name__ == "__main__":

@@ -88,8 +88,9 @@ export function CreateKbVersion({ kb, draftVersion, onVersionCreated, onCancel }
     if (kb) {
       setIsLoading(true)
       try {
+        // Only fetch documents for this KB
         const [docs, docVersionsRaw] = await Promise.all([
-          apiClient.getDocuments(kb.project_id),
+          apiClient.getDocumentsByKb(kb.id),
           apiClient.getAllDocumentVersions(kb.project_id)
         ])
         const docVersions = docVersionsRaw || [];
@@ -161,6 +162,7 @@ export function CreateKbVersion({ kb, draftVersion, onVersionCreated, onCancel }
       } else {
         await apiClient.createKbVersion(kb.id, versionData);
       }
+      await fetchData(); // Refresh state after update
       onVersionCreated();
     } catch (error: any) {
       setError(error.message);
@@ -190,7 +192,7 @@ export function CreateKbVersion({ kb, draftVersion, onVersionCreated, onCancel }
       setSelectedVersions(prev => ({ ...prev, [docToAdd]: latest }))
       setDocToAdd('')
       setShowAddDoc(false)
-      fetchData(); // Refresh document/version lists after adding
+      // fetchData(); // Removed to prevent UI state overwrite
     }
   }
 

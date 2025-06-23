@@ -95,8 +95,9 @@ export default function Page() {
   }
 
   const handleCreateVersion = () => {
-    const draftVersion = versions.find((v: KnowledgeBaseVersion) => v.status === 'draft')
-    setSelectedKbVersion(draftVersion || null)
+    // Always find the latest draft version object
+    const draftVersion = versions.find((v: KnowledgeBaseVersion) => v.status === 'draft') || null;
+    setSelectedKbVersion(draftVersion)
     setActiveView('create_kb_version')
   }
 
@@ -130,8 +131,10 @@ export default function Page() {
   }
 
   const handleKbVersionSelect = (version: KnowledgeBaseVersion) => {
-    setSelectedKbVersion(version)
-    if (version.status === 'draft') {
+    // Always use the actual version object from the versions list
+    const realVersion = versions.find(v => v.id === version.id) || version;
+    setSelectedKbVersion(realVersion)
+    if (realVersion.status === 'draft') {
       setActiveView('create_kb_version')
     } else {
       setActiveView('kb_version_detail')

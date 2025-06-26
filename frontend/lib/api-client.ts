@@ -46,6 +46,7 @@ export interface DocumentVersion {
   updated_at: string
   file_name?: string
   source_url?: string
+  file_size?: number
 }
 
 export interface KnowledgeBaseVersion {
@@ -257,8 +258,12 @@ class ApiClient {
   }
 
   async getDocumentsByKb(kbId: string): Promise<Document[]> {
-    const response = await this.axiosInstance.get('/knowledge-bases/' + kbId + '/documents');
-    return response.data.documents;
+    const response = await this.axiosInstance.get(`/knowledge-bases/${kbId}/documents`)
+    return response.data.documents
+  }
+
+  async deleteDocumentVersion(docId: string, versionId: string): Promise<void> {
+    await this.axiosInstance.delete(`/documents/${docId}/versions/${versionId}`)
   }
 }
 

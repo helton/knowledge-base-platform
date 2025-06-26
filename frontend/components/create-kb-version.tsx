@@ -13,6 +13,9 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { X } from 'lucide-react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Label } from '@/components/ui/label'
+import { Loader2 } from 'lucide-react'
 
 interface CreateKbVersionProps {
   kb: KnowledgeBase
@@ -210,190 +213,210 @@ export function CreateKbVersion({ kb, draftVersion, onVersionCreated, onCancel }
 
   if (!kb) {
     return (
-      <div className="p-4 text-center text-gray-500">
+      <div className="p-4 text-center text-muted-foreground">
         Select a Knowledge Base to create a version.
       </div>
     )
   }
 
   return (
-    <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">
-        {draftVersion ? 'Edit Draft Version' : 'Create New Version'} for {kb.name}
-      </h1>
+    <div className="p-6 h-full flex flex-col">
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold mb-2">
+          {draftVersion ? 'Edit Draft Version' : 'Create New Version'} for {kb.name}
+        </h1>
+        <p className="text-muted-foreground">
+          Configure version details and select document versions to include.
+        </p>
+      </div>
+
       {error && (
-        <div className="mb-4">
-          <div className="rounded border border-yellow-400 bg-yellow-50 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 px-4 py-2 text-sm flex items-center gap-2">
-            <span className="font-semibold">Draft:</span> This is a draft version. Please publish it before creating a new version.
-          </div>
-        </div>
+        <Card className="mb-6 border-yellow-200 bg-yellow-50 dark:bg-yellow-900/20">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-2 text-yellow-800 dark:text-yellow-200">
+              <span className="font-semibold">Draft:</span> This is a draft version. Please publish it before creating a new version.
+            </div>
+          </CardContent>
+        </Card>
       )}
       
-      <div className="flex flex-col gap-8 max-w-3xl">
-        <div className="p-4 border rounded-lg bg-gray-50 dark:bg-gray-800">
-          <h3 className="text-lg font-semibold mb-4">Version Details</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium mb-1">Version</label>
-              {(isFirstRelease || isFirstDraft) ? (
-                <div className="w-full px-3 py-2 border rounded-md bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200">v1.0.0</div>
-              ) : (
-                <select
-                  value={versionBump}
-                  onChange={(e) => setVersionBump(e.target.value as 'major' | 'minor' | 'patch')}
-                  className="w-full px-3 py-2 border rounded-md"
-                  disabled={documents.length === 0 || !!draftVersion}
-                >
-                  <option value="patch">{nextVersions.patch}</option>
-                  <option value="minor">{nextVersions.minor}</option>
-                  <option value="major">{nextVersions.major}</option>
-                </select>
-              )}
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Version Name (Optional)</label>
-              <input
-                type="text"
-                value={versionName}
-                onChange={(e) => setVersionName(e.target.value)}
-                className="w-full px-3 py-2 border rounded-md"
-                placeholder="e.g., 'Updated with new data'"
-                disabled={false}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Access Level</label>
-              <select
-                value={accessLevel}
-                onChange={(e) => setAccessLevel(e.target.value as 'private' | 'protected' | 'public')}
-                className="w-full px-3 py-2 border rounded-md"
-                disabled={false}
-              >
-                <option value="private">Private</option>
-                <option value="protected">Protected</option>
-                <option value="public">Public</option>
-              </select>
-            </div>
-          </div>
-          <div className="mt-4">
-            <label className="block text-sm font-medium mb-1">Release Notes (Optional)</label>
-            <textarea
-              value={releaseNotes}
-              onChange={(e) => setReleaseNotes(e.target.value)}
-              className="w-full px-3 py-2 border rounded-md"
-              placeholder="Describe what's new in this version..."
-              rows={3}
-            />
-          </div>
-        </div>
-
-        <div>
-          <h3 className="text-lg font-semibold mb-4">Select Document Versions</h3>
-          {isLoading ? (
-            <p>Loading documents...</p>
-          ) : (
-            <div className="border rounded-lg p-4">
-              <div className="mb-4 flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowAddDoc(true)}
-                  disabled={availableDocs.length === 0}
-                >
-                  + Add Document
-                </Button>
-                {showAddDoc && (
-                  <div className="flex items-center gap-2 ml-2">
-                    <select
-                      value={docToAdd}
-                      onChange={e => setDocToAdd(e.target.value)}
-                      className="px-2 py-1 border rounded text-sm"
-                    >
-                      <option value="">Select document...</option>
-                      {availableDocs.map(doc => (
-                        <option key={doc.id} value={doc.id}>{doc.name}</option>
-                      ))}
-                    </select>
-                    <Button
-                      size="sm"
-                      onClick={handleAddDocument}
-                      disabled={!docToAdd}
-                    >
-                      Add
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => { setShowAddDoc(false); setDocToAdd('') }}
-                    >
-                      Cancel
-                    </Button>
+      <div className="flex flex-col gap-6 max-w-4xl">
+        <Card>
+          <CardHeader>
+            <CardTitle>Version Details</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label>Version</Label>
+                {(isFirstRelease || isFirstDraft) ? (
+                  <div className="flex h-10 w-full rounded-md border border-input bg-muted px-3 py-2 text-sm">
+                    v1.0.0
                   </div>
+                ) : (
+                  <select
+                    value={versionBump}
+                    onChange={(e) => setVersionBump(e.target.value as 'major' | 'minor' | 'patch')}
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    disabled={documents.length === 0 || !!draftVersion}
+                  >
+                    <option value="patch">{nextVersions.patch}</option>
+                    <option value="minor">{nextVersions.minor}</option>
+                    <option value="major">{nextVersions.major}</option>
+                  </select>
                 )}
               </div>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Document</TableHead>
-                    <TableHead>Version</TableHead>
-                    <TableHead></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {selectedDocIds.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={3} className="text-center text-gray-500">No documents added</TableCell>
-                    </TableRow>
-                  )}
-                  {selectedDocIds.map(docId => {
-                    const doc = documents.find(d => d.id === docId)
-                    const versions = documentVersions[docId] || []
-                    const selectedVersionId = selectedVersions[docId]
-                    return doc ? (
-                      <TableRow key={doc.id}>
-                        <TableCell>
-                          <div>
-                            <div className="font-medium">{doc.name}</div>
-                            <div className="text-sm text-gray-500">{doc.description}</div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <select
-                            value={selectedVersionId || ''}
-                            onChange={e => handleVersionSelect(doc.id, e.target.value)}
-                            className="w-full px-2 py-1 border rounded text-sm"
-                          >
-                            <option value="">No version selected</option>
-                            {versions
-                              .slice() // copy to avoid mutating state
-                              .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-                              .map(version => (
-                                <option key={version.id} value={version.id}>
-                                  {version.version_number.startsWith('v') ? version.version_number : `v${version.version_number}`} - {new Date(version.created_at).toISOString().slice(0, 10)}{version.is_archived ? ' (ARCHIVED)' : ''}
-                                </option>
-                              ))}
-                          </select>
-                        </TableCell>
-                        <TableCell>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => handleRemoveDocument(doc.id)}
-                            aria-label="Remove document"
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ) : null
-                  })}
-                </TableBody>
-              </Table>
+              <div className="space-y-2">
+                <Label>Version Name (Optional)</Label>
+                <input
+                  type="text"
+                  value={versionName}
+                  onChange={(e) => setVersionName(e.target.value)}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  placeholder="e.g., 'Updated with new data'"
+                  disabled={false}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Access Level</Label>
+                <select
+                  value={accessLevel}
+                  onChange={(e) => setAccessLevel(e.target.value as 'private' | 'protected' | 'public')}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  disabled={false}
+                >
+                  <option value="private">Private</option>
+                  <option value="protected">Protected</option>
+                  <option value="public">Public</option>
+                </select>
+              </div>
             </div>
-          )}
-        </div>
+            <div className="space-y-2">
+              <Label>Release Notes (Optional)</Label>
+              <textarea
+                value={releaseNotes}
+                onChange={(e) => setReleaseNotes(e.target.value)}
+                className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                placeholder="Describe what's new in this version..."
+                rows={3}
+              />
+            </div>
+          </CardContent>
+        </Card>
 
-        <div className="mt-8 flex gap-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Select Document Versions</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowAddDoc(true)}
+                    disabled={availableDocs.length === 0}
+                  >
+                    Add Document
+                  </Button>
+                  {showAddDoc && (
+                    <div className="flex items-center gap-2 ml-2">
+                      <select
+                        value={docToAdd}
+                        onChange={e => setDocToAdd(e.target.value)}
+                        className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <option value="">Select document...</option>
+                        {availableDocs.map(doc => (
+                          <option key={doc.id} value={doc.id}>{doc.name}</option>
+                        ))}
+                      </select>
+                      <Button
+                        size="sm"
+                        onClick={handleAddDocument}
+                        disabled={!docToAdd}
+                      >
+                        Add
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => { setShowAddDoc(false); setDocToAdd('') }}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  )}
+                </div>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Document</TableHead>
+                      <TableHead>Version</TableHead>
+                      <TableHead></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {selectedDocIds.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={3} className="text-center text-muted-foreground">No documents added</TableCell>
+                      </TableRow>
+                    )}
+                    {selectedDocIds.map(docId => {
+                      const doc = documents.find(d => d.id === docId)
+                      const versions = documentVersions[docId] || []
+                      const selectedVersionId = selectedVersions[docId]
+                      return doc ? (
+                        <TableRow key={doc.id}>
+                          <TableCell>
+                            <div>
+                              <div className="font-medium">{doc.name}</div>
+                              <div className="text-sm text-muted-foreground">{doc.description}</div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <select
+                              value={selectedVersionId || ''}
+                              onChange={e => handleVersionSelect(doc.id, e.target.value)}
+                              className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                              <option value="">No version selected</option>
+                              {versions
+                                .slice() // copy to avoid mutating state
+                                .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+                                .map(version => (
+                                  <option key={version.id} value={version.id}>
+                                    {version.version_number.startsWith('v') ? version.version_number : `v${version.version_number}`} - {new Date(version.created_at).toISOString().slice(0, 10)}{version.is_archived ? ' (ARCHIVED)' : ''}
+                                  </option>
+                                ))}
+                            </select>
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleRemoveDocument(doc.id)}
+                              aria-label="Remove document"
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ) : null
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <div className="flex gap-2">
           <Button variant="outline" onClick={onCancel}>
             Cancel
           </Button>

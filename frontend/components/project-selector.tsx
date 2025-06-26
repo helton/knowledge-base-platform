@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { apiClient, Project } from '@/lib/api-client'
+import { Button } from '@/components/ui/button'
+import { Check, ChevronDown, Loader2 } from 'lucide-react'
 
 interface ProjectSelectorProps {
   selectedProjectId: string | null
@@ -56,60 +58,48 @@ export function ProjectSelector({ selectedProjectId, onProjectSelect }: ProjectS
 
   return (
     <div className="relative text-sm" ref={menuRef}>
-      <button
+      <Button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-openai-dark-light transition-colors"
+        variant="ghost"
+        className="flex items-center gap-2 px-2 py-1.5 h-auto"
       >
-        <span className="font-medium text-gray-800 dark:text-gray-200">
+        <span className="font-medium">
           {currentProject?.name || 'Select Project'}
         </span>
-        <svg
-          className="w-4 h-4 text-gray-500 dark:text-gray-400"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M8 9l4-4 4 4m0 6l-4 4-4-4"
-          />
-        </svg>
-      </button>
+        <ChevronDown className="w-4 h-4 text-muted-foreground" />
+      </Button>
 
       {isOpen && (
-        <div className="absolute left-0 mt-2 w-60 bg-white dark:bg-openai-dark-light rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50 overflow-hidden">
+        <div className="absolute left-0 mt-2 w-60 bg-background rounded-lg shadow-lg border z-50 overflow-hidden">
           <div className="p-2">
-            <div className="px-2 py-1 text-xs font-semibold text-gray-400 dark:text-gray-500">
+            <div className="px-2 py-1 text-xs font-semibold text-muted-foreground">
               PROJECTS
             </div>
             <div className="mt-1">
               {isLoading ? (
-                <div className="px-2 py-1.5 text-sm text-gray-500">Loading...</div>
+                <div className="px-2 py-1.5 text-sm text-muted-foreground flex items-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Loading...
+                </div>
               ) : (
                 projects.map(project => (
-                  <button
+                  <Button
                     key={project.id}
                     onClick={() => handleSelect(project.id)}
-                    className={`w-full text-left px-2 py-1.5 text-sm rounded-md flex items-center gap-2 ${
+                    variant="ghost"
+                    className={`w-full justify-start px-2 py-1.5 text-sm h-auto ${
                       project.id === selectedProjectId
-                        ? 'bg-gray-100 dark:bg-gray-900/50 text-gray-900 dark:text-gray-100'
-                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800/50'
+                        ? 'bg-muted text-foreground'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-muted'
                     }`}
                   >
-                    <svg
-                      className={`w-4 h-4 ${
+                    <Check
+                      className={`w-4 h-4 mr-2 ${
                         project.id === selectedProjectId ? 'opacity-100' : 'opacity-0'
                       }`}
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
+                    />
                     <span>{project.name}</span>
-                  </button>
+                  </Button>
                 ))
               )}
             </div>

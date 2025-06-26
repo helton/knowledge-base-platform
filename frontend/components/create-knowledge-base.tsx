@@ -3,6 +3,10 @@
 import { useState } from 'react'
 import { apiClient, KnowledgeBase } from '@/lib/api-client'
 import { useRouter } from 'next/navigation'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 
 interface CreateKnowledgeBaseProps {
   projectId: string
@@ -21,9 +25,10 @@ export function CreateKnowledgeBase({ projectId, onKbCreated }: CreateKnowledgeB
     try {
       const newKb = await apiClient.createKnowledgeBase(
         projectId,
-        newKbName.trim(),
-        newKbDescription.trim(),
-        newKbAccessLevel
+        {
+          name: newKbName.trim(),
+          description: newKbDescription.trim()
+        }
       )
       onKbCreated(newKb)
     } catch (error) {
@@ -34,44 +39,42 @@ export function CreateKnowledgeBase({ projectId, onKbCreated }: CreateKnowledgeB
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg p-6 max-w-2xl mx-auto">
-      <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-6">Create New Knowledge Base</h2>
-      <div className="space-y-4">
-        <div>
-          <label htmlFor="kb-name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            Name *
-          </label>
-          <input
+    <Card className="max-w-2xl mx-auto">
+      <CardHeader>
+        <CardTitle>Create New Knowledge Base</CardTitle>
+        <CardDescription>
+          Create a new knowledge base to organize your documents and versions.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="kb-name">Name *</Label>
+          <Input
             id="kb-name"
             type="text"
             value={newKbName}
             onChange={(e) => setNewKbName(e.target.value)}
-            className="input-field w-full"
             placeholder="e.g., 'Product Documentation'"
           />
         </div>
-        <div>
-          <label htmlFor="kb-description" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            Description
-          </label>
+        <div className="space-y-2">
+          <Label htmlFor="kb-description">Description</Label>
           <textarea
             id="kb-description"
             value={newKbDescription}
             onChange={(e) => setNewKbDescription(e.target.value)}
             rows={3}
-            className="input-field w-full"
+            className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             placeholder="A brief description of what this knowledge base contains."
           />
         </div>
-        <div>
-          <label htmlFor="kb-access" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            Access Level
-          </label>
+        <div className="space-y-2">
+          <Label htmlFor="kb-access">Access Level</Label>
           <select
             id="kb-access"
             value={newKbAccessLevel}
             onChange={(e) => setNewKbAccessLevel(e.target.value as 'private' | 'protected' | 'public')}
-            className="input-field w-full"
+            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <option value="private">Private</option>
             <option value="protected">Protected</option>
@@ -79,15 +82,14 @@ export function CreateKnowledgeBase({ projectId, onKbCreated }: CreateKnowledgeB
           </select>
         </div>
         <div className="flex items-center space-x-3 pt-4">
-          <button
+          <Button
             onClick={handleCreateKnowledgeBase}
             disabled={!newKbName.trim() || isCreating}
-            className="btn btn-primary"
           >
             {isCreating ? 'Creating...' : 'Create Knowledge Base'}
-          </button>
+          </Button>
         </div>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   )
 } 

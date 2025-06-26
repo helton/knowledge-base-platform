@@ -2,11 +2,10 @@
 
 export type ActiveView =
   | 'kbs'
-  | 'documents'
-  | 'settings'
   | 'create_kb'
+  | 'documents'
   | 'document_versions'
-  | 'kb_versions'
   | 'kb_detail'
   | 'kb_version_detail'
-  | 'create_kb_version'; 
+  | 'create_kb_version'
+  | 'kb_versions'; 

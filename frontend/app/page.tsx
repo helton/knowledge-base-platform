@@ -6,15 +6,14 @@ import type { ActiveView } from '@/lib/types'
 import { Sidebar } from '@/components/sidebar'
 import { Documents } from '@/components/documents'
 import { KnowledgeBases } from '@/components/knowledge-bases'
-import { Settings } from '@/components/settings'
-import { KnowledgeBase, Project, Document, DocumentVersion, KnowledgeBaseVersion } from '@/lib/api-client'
-import { apiClient } from '@/lib/api-client'
 import { CreateKnowledgeBase } from '@/components/create-knowledge-base'
 import { DocumentVersions } from '@/components/document-versions'
-import { KnowledgeBaseVersions } from '@/components/knowledge-base-versions'
+import { KnowledgeBaseDetailTabs } from '@/components/knowledge-base-detail-tabs'
 import { CreateKbVersion } from '@/components/create-kb-version'
-import { KnowledgeBaseDetail } from '@/components/knowledge-base-detail'
 import { KbVersionDetail } from '@/components/kb-version-detail'
+import { Welcome } from '@/components/welcome'
+import { KnowledgeBase, Project, Document, DocumentVersion, KnowledgeBaseVersion } from '@/lib/api-client'
+import { apiClient } from '@/lib/api-client'
 
 export default function Page() {
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null)
@@ -26,6 +25,7 @@ export default function Page() {
   const [project, setProject] = useState<Project | null>(null)
   const [versions, setVersions] = useState<KnowledgeBaseVersion[]>([])
   const [currentView, setCurrentView] = useState('welcome')
+  const [defaultTab, setDefaultTab] = useState<'overview' | 'documents' | 'versions'>('overview')
 
   useEffect(() => {
     if (selectedProjectId) {
@@ -37,7 +37,7 @@ export default function Page() {
 
   useEffect(() => {
     // When switching to a project-level view, reset the rest of the breadcrumb chain
-    if (activeView === 'kbs' || activeView === 'create_kb' || activeView === 'settings') {
+    if (activeView === 'kbs' || activeView === 'create_kb') {
       setSelectedKb(null)
       setSelectedDocument(null)
       setSelectedDocumentVersion(null)
@@ -71,7 +71,8 @@ export default function Page() {
     setSelectedKb(kb)
     setSelectedDocument(null)
     setSelectedDocumentVersion(null)
-    setActiveView('kb_versions')
+    setDefaultTab('overview')
+    setActiveView('kb_detail')
   }
 
   const handleDocumentSelect = (document: Document) => {
@@ -80,7 +81,7 @@ export default function Page() {
   }
 
   const handleBackToDocuments = () => {
-    setActiveView('documents')
+    setActiveView('kb_detail')
     setSelectedDocument(null)
     setSelectedDocumentVersion(null)
   }
@@ -88,10 +89,6 @@ export default function Page() {
   const handleBackToKbs = () => {
     setActiveView('kbs')
     setSelectedKb(null)
-  }
-
-  const handleBackToKbVersions = () => {
-    setActiveView('kb_versions')
   }
 
   const handleCreateVersion = () => {
@@ -102,11 +99,12 @@ export default function Page() {
   }
 
   const handleVersionCreated = () => {
-    setActiveView('kb_versions')
-  }
-
-  const handleViewKbVersions = () => {
-    setActiveView('kb_versions')
+    setDefaultTab('versions')
+    setActiveView('kb_detail')
+    // Refresh versions list
+    if (selectedKb) {
+      apiClient.getKbVersions(selectedKb.id).then(setVersions)
+    }
   }
 
   const handleProjectClick = () => {
@@ -142,7 +140,7 @@ export default function Page() {
   }
 
   return (
-    <div className="flex min-h-screen w-full flex-col bg-gray-50 dark:bg-black">
+    <div className="flex min-h-screen w-full flex-col bg-background">
       <Header 
         selectedProjectId={selectedProjectId}
         onProjectSelect={handleProjectSelect}
@@ -174,27 +172,11 @@ export default function Page() {
               onKbCreated={handleKbSelect}
             />
           )}
-          {activeView === 'documents' && selectedKb && (
-            <Documents 
-              selectedKb={selectedKb}
-              onDocumentSelect={handleDocumentSelect}
-              onViewVersions={() => setActiveView('kb_versions')}
-            />
-          )}
           {activeView === 'document_versions' && selectedDocument && (
             <DocumentVersions
-              document={selectedDocument}
-              onVersionSelect={setSelectedDocumentVersion}
+              documentId={selectedDocument.id}
+              documentName={selectedDocument.name}
               onBack={handleBackToDocuments}
-            />
-          )}
-          {activeView === 'kb_versions' && selectedKb && (
-            <KnowledgeBaseVersions
-              kb={selectedKb}
-              onViewDocuments={() => setActiveView('documents')}
-              onCreateVersion={handleCreateVersion}
-              onViewVersionDetails={handleKbVersionSelect}
-              onBack={handleBackToKbs}
             />
           )}
           {activeView === 'create_kb_version' && selectedKb && (
@@ -202,22 +184,26 @@ export default function Page() {
               kb={selectedKb}
               draftVersion={selectedKbVersion}
               onVersionCreated={handleVersionCreated}
-              onCancel={handleBackToKbVersions}
+              onCancel={() => setActiveView('kb_detail')}
             />
           )}
-          {activeView === 'settings' && <Settings kbId={selectedKb?.id || null} />}
           {activeView === 'kb_detail' && selectedKb && (
-            <KnowledgeBaseDetail
+            <KnowledgeBaseDetailTabs
               kb={selectedKb}
-              onViewDocuments={() => setActiveView('documents')}
-              onViewVersions={() => setActiveView('kb_versions')}
-              onBack={() => setActiveView('kbs')}
+              onBack={handleBackToKbs}
+              onDocumentSelect={handleDocumentSelect}
+              onViewVersionDetails={handleKbVersionSelect}
+              onCreateVersion={handleCreateVersion}
+              defaultTab={defaultTab}
             />
           )}
           {activeView === 'kb_version_detail' && selectedKbVersion && (
             <KbVersionDetail
               kbVersion={selectedKbVersion}
-              onBack={() => setActiveView('kb_versions')}
+              onBack={() => {
+                setDefaultTab('versions');
+                setActiveView('kb_detail');
+              }}
             />
           )}
         </main>

@@ -2,6 +2,9 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { apiClient, Project } from '@/lib/api-client'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { User, ChevronDown, Plus } from 'lucide-react'
 
 interface UserMenuProps {
   selectedProjectId: string | null
@@ -60,7 +63,10 @@ export function UserMenu({ selectedProjectId, onProjectSelect }: UserMenuProps) 
     const description = prompt('Enter project description (optional):')
     
     try {
-      const newProject = await apiClient.createProject(name, description || undefined)
+      const newProject = await apiClient.createProject({
+        name,
+        description: description || ''
+      })
       setProjects([...projects, newProject])
       onProjectSelect(newProject.id)
       setIsOpen(false)
@@ -74,62 +80,59 @@ export function UserMenu({ selectedProjectId, onProjectSelect }: UserMenuProps) 
 
   return (
     <div className="relative" ref={menuRef}>
-      <button
+      <Button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center space-x-2 text-sm text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md hover:bg-gray-100 transition-colors duration-200"
+        variant="ghost"
+        className="flex items-center space-x-2"
       >
-        <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
-          <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-          </svg>
+        <div className="w-8 h-8 bg-muted rounded-full flex items-center justify-center">
+          <User className="w-4 h-4 text-muted-foreground" />
         </div>
         <span className="hidden sm:block">{currentProject?.name || 'Select Project'}</span>
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-        </svg>
-      </button>
+        <ChevronDown className="w-4 h-4" />
+      </Button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
-          <div className="px-4 py-3 border-b border-gray-200">
-            <h3 className="text-sm font-medium text-gray-900">Projects</h3>
-          </div>
+        <Card className="absolute right-0 mt-2 w-64 z-50">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm">Projects</CardTitle>
+          </CardHeader>
           
-          <div className="py-2">
+          <CardContent className="space-y-2">
             {isLoading ? (
-              <div className="px-4 py-2 text-sm text-gray-500">Loading projects...</div>
+              <div className="text-sm text-muted-foreground">Loading projects...</div>
             ) : projects.length > 0 ? (
               projects.map((project) => (
-                <button
+                <Button
                   key={project.id}
                   onClick={() => handleProjectSelect(project.id)}
-                  className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 transition-colors duration-200 ${
-                    selectedProjectId === project.id ? 'bg-gray-100 text-gray-900' : 'text-gray-700'
-                  }`}
+                  variant={selectedProjectId === project.id ? "default" : "ghost"}
+                  className="w-full justify-start h-auto p-3"
                 >
-                  <div className="font-medium">{project.name}</div>
-                  {project.description && (
-                    <div className="text-xs text-gray-500 truncate">{project.description}</div>
-                  )}
-                </button>
+                  <div className="text-left">
+                    <div className="font-medium">{project.name}</div>
+                    {project.description && (
+                      <div className="text-xs text-muted-foreground truncate">{project.description}</div>
+                    )}
+                  </div>
+                </Button>
               ))
             ) : (
-              <div className="px-4 py-2 text-sm text-gray-500">No projects found</div>
+              <div className="text-sm text-muted-foreground">No projects found</div>
             )}
-          </div>
+          </CardContent>
           
-          <div className="px-4 py-2 border-t border-gray-200">
-            <button
+          <div className="border-t p-3">
+            <Button
               onClick={handleAddProject}
-              className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-200 flex items-center space-x-2"
+              variant="ghost"
+              className="w-full justify-start h-auto p-3"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-              </svg>
+              <Plus className="mr-2 h-4 w-4" />
               <span>Create New Project</span>
-            </button>
+            </Button>
           </div>
-        </div>
+        </Card>
       )}
     </div>
   )

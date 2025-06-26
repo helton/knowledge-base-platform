@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { Button } from '@/components/ui/button'
+import { User, LogOut, Settings } from 'lucide-react'
 
 export function UserAccountMenu() {
   const [isOpen, setIsOpen] = useState(false)
@@ -22,30 +24,36 @@ export function UserAccountMenu() {
 
   return (
     <div className="relative" ref={menuRef}>
-      <button
+      <Button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center space-x-2 text-sm"
+        variant="ghost"
+        size="icon"
+        className="h-8 w-8 rounded-full"
       >
-        <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center ring-1 ring-gray-300 dark:bg-gray-700 dark:ring-gray-600">
-          <svg className="w-5 h-5 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-          </svg>
-        </div>
-      </button>
+        <User className="h-4 w-4" />
+      </Button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-gray-900 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 z-50">
-          <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-            <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Helton Souza</p>
-            <p className="text-sm text-gray-500 dark:text-gray-400">heltoncarlossouza@gmail.com</p>
+        <div className="absolute right-0 mt-2 w-64 bg-background rounded-md shadow-lg border z-50">
+          <div className="px-4 py-3 border-b">
+            <p className="text-sm font-medium">Helton Souza</p>
+            <p className="text-sm text-muted-foreground">heltoncarlossouza@gmail.com</p>
           </div>
-          <div className="border-t border-gray-200 dark:border-gray-700 py-2">
-            <a href="#" className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800">
+          <div className="py-2">
+            <Button
+              variant="ghost"
+              className="w-full justify-start px-4 py-2 text-sm h-auto"
+            >
+              <Settings className="mr-2 h-4 w-4" />
               Your profile
-            </a>
-            <a href="#" className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800">
+            </Button>
+            <Button
+              variant="ghost"
+              className="w-full justify-start px-4 py-2 text-sm h-auto"
+            >
+              <LogOut className="mr-2 h-4 w-4" />
               Log out
-            </a>
+            </Button>
           </div>
         </div>
       )}

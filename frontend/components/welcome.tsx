@@ -2,6 +2,11 @@
 
 import { useState, useEffect } from 'react'
 import { apiClient, Project } from '@/lib/api-client'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Loader2, Plus, FolderOpen } from 'lucide-react'
 
 interface WelcomeProps {
   onProjectSelect: (projectId: string) => void
@@ -43,7 +48,7 @@ export function Welcome({ onProjectSelect }: WelcomeProps) {
     const name = prompt('Enter new project name:')
     if (!name) return
     try {
-      const newProject = await apiClient.createProject(name, '') // Ensure description is not null
+      const newProject = await apiClient.createProject({ name, description: '' })
       setProjects([...projects, newProject])
       setSelectedProjectId(newProject.id)
       onProjectSelect(newProject.id)
@@ -55,7 +60,7 @@ export function Welcome({ onProjectSelect }: WelcomeProps) {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-gray-100"></div>
+        <Loader2 className="h-8 w-8 animate-spin" />
       </div>
     )
   }
@@ -63,33 +68,35 @@ export function Welcome({ onProjectSelect }: WelcomeProps) {
   return (
     <div className="flex flex-col items-center justify-center h-full text-center">
       <div className="max-w-2xl mx-auto">
-        <h1 className="text-4xl font-bold text-gray-900 dark:text-gray-100 mb-4">
+        <h1 className="text-4xl font-bold mb-4">
           Welcome to Knowledge Base
         </h1>
-        <p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto mb-12">
+        <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-12">
           Select a project or create a new one to get started.
         </p>
 
         {error ? (
-          <div className="bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 rounded-lg p-4 max-w-md mx-auto">
-            <p>{error}</p>
-            <button onClick={loadProjects} className="mt-2 font-semibold hover:underline">
-              Retry
-            </button>
-          </div>
+          <Card className="max-w-md mx-auto">
+            <CardContent className="pt-6">
+              <p className="text-destructive">{error}</p>
+              <Button onClick={loadProjects} variant="outline" className="mt-2">
+                Retry
+              </Button>
+            </CardContent>
+          </Card>
         ) : projects.length > 0 ? (
-          <div className="bg-white dark:bg-openai-dark-light rounded-xl shadow-lg p-8 w-full max-w-md mx-auto">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-6">Select Project</h2>
-            <div className="space-y-6">
-              <div>
-                <label htmlFor="project-select" className="block text-sm font-medium text-gray-700 dark:text-gray-400 mb-2 text-left">
-                  Project
-                </label>
+          <Card className="w-full max-w-md mx-auto">
+            <CardHeader>
+              <CardTitle>Select Project</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="project-select">Project</Label>
                 <select
                   id="project-select"
                   value={selectedProjectId}
                   onChange={(e) => setSelectedProjectId(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {projects.map((project) => (
                     <option key={project.id} value={project.id}>
@@ -99,41 +106,42 @@ export function Welcome({ onProjectSelect }: WelcomeProps) {
                 </select>
               </div>
               <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4">
-                <button
+                <Button
                   onClick={handleProjectSelect}
-                  className="w-full bg-black dark:bg-white text-white dark:text-black px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors"
+                  className="w-full"
                 >
                   Continue
-                </button>
-                <button
+                </Button>
+                <Button
                   onClick={handleAddProject}
-                  className="w-full bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                  variant="outline"
+                  className="w-full"
                 >
                   New Project
-                </button>
+                </Button>
               </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         ) : (
-          <div className="bg-white dark:bg-openai-dark-light rounded-xl shadow-lg p-8 w-full max-w-md mx-auto">
-            <div className="mb-6">
-              <div className="mx-auto h-12 w-12 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-4">
-                <svg className="h-6 w-6 text-gray-400 dark:text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                </svg>
+          <Card className="w-full max-w-md mx-auto">
+            <CardContent className="pt-6">
+              <div className="mb-6">
+                <div className="mx-auto h-12 w-12 bg-muted rounded-full flex items-center justify-center mb-4">
+                  <Plus className="h-6 w-6 text-muted-foreground" />
+                </div>
+                <h3 className="text-lg font-medium mb-2">No projects yet</h3>
+                <p className="text-muted-foreground">
+                  Create your first project to get started.
+                </p>
               </div>
-              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">No projects yet</h3>
-              <p className="text-gray-600 dark:text-gray-400">
-                Create your first project to get started.
-              </p>
-            </div>
-            <button
-              onClick={handleAddProject}
-              className="w-full bg-black dark:bg-white text-white dark:text-black px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors"
-            >
-              Create Project
-            </button>
-          </div>
+              <Button
+                onClick={handleAddProject}
+                className="w-full"
+              >
+                Create Project
+              </Button>
+            </CardContent>
+          </Card>
         )}
       </div>
     </div>

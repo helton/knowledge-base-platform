@@ -2,20 +2,24 @@
 
 import React, { useState, useEffect } from 'react'
 import { apiClient, KnowledgeBaseVersion, Document, DocumentVersion } from '@/lib/api-client'
-import { ArrowLeft, FileText, GitBranch, Calendar, User, AlertTriangle, CheckCircle, Clock } from 'lucide-react'
+import { ArrowLeft, FileText, GitBranch, Calendar, User, AlertTriangle, CheckCircle, Clock, Star } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
 
 interface KbVersionDetailProps {
   kbVersion: KnowledgeBaseVersion
   onBack: () => void
 }
 
-type DocumentWithVersion = {
+type DocumentWithAllVersions = {
   document: Document
   documentVersion: DocumentVersion
+  allDocumentVersions: DocumentVersion[]
 }
 
 export function KbVersionDetail({ kbVersion, onBack }: KbVersionDetailProps) {
-  const [documentsWithVersions, setDocumentsWithVersions] = useState<DocumentWithVersion[]>([])
+  const [documentsWithVersions, setDocumentsWithVersions] = useState<DocumentWithAllVersions[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -27,12 +31,13 @@ export function KbVersionDetail({ kbVersion, onBack }: KbVersionDetailProps) {
     setIsLoading(true)
     setError(null)
     try {
-      // Use the document_version_ids from the kbVersion prop
-      const docsWithVersions: DocumentWithVersion[] = await Promise.all(
+      // For each document, fetch all versions to determine latest/outdated
+      const docsWithVersions: DocumentWithAllVersions[] = await Promise.all(
         kbVersion.document_version_ids.map(async (versionId) => {
           const documentVersion = await apiClient.getDocumentVersion(versionId)
           const document = await apiClient.getDocument(documentVersion.document_id)
-          return { document, documentVersion }
+          const allDocumentVersions = await apiClient.getDocumentVersions(document.id)
+          return { document, documentVersion, allDocumentVersions }
         })
       )
       setDocumentsWithVersions(docsWithVersions)
@@ -44,43 +49,17 @@ export function KbVersionDetail({ kbVersion, onBack }: KbVersionDetailProps) {
     }
   }
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'published':
-        return 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300'
-      case 'draft':
-        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300'
-      case 'archived':
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
-      default:
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
-    }
-  }
-
-  const getAccessLevelColor = (accessLevel: string) => {
-    switch (accessLevel) {
-      case 'private':
-        return 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300'
-      case 'protected':
-        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300'
-      case 'public':
-        return 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300'
-      default:
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
-    }
-  }
-
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-500"></div>
+        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-primary"></div>
       </div>
     )
   }
 
   if (error) {
     return (
-      <div className="text-center py-8 text-red-600 dark:text-red-400">
+      <div className="text-center py-8 text-destructive">
         {error}
       </div>
     )
@@ -91,17 +70,19 @@ export function KbVersionDetail({ kbVersion, onBack }: KbVersionDetailProps) {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
-          <button
+          <Button
             onClick={onBack}
-            className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full transition-colors"
+            variant="ghost"
+            size="icon"
+            className="h-10 w-10"
           >
             <ArrowLeft className="h-5 w-5" />
-          </button>
+          </Button>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+            <h1 className="text-2xl font-bold">
               {kbVersion.version_number}
             </h1>
-            <p className="text-gray-600 dark:text-gray-400">
+            <p className="text-muted-foreground">
               Knowledge Base Version Details
             </p>
           </div>
@@ -110,157 +91,207 @@ export function KbVersionDetail({ kbVersion, onBack }: KbVersionDetailProps) {
 
       {/* Version Info Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Status</p>
-              <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(kbVersion.status)}`}>
-                {kbVersion.status}
-              </span>
-            </div>
-            {kbVersion.status === 'published' && <CheckCircle className="h-6 w-6 text-green-500" />}
-            {kbVersion.status === 'draft' && <Clock className="h-6 w-6 text-yellow-500" />}
-          </div>
-        </div>
-
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Access Level</p>
-              <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getAccessLevelColor(kbVersion.access_level)}`}>
-                {kbVersion.access_level}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Primary</p>
-              <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                {kbVersion.is_primary ? 'Yes' : 'No'}
-              </p>
-            </div>
-            {kbVersion.is_primary && (
-              <div className="h-8 w-8 bg-yellow-100 dark:bg-yellow-900 rounded-full flex items-center justify-center">
-                <span className="text-yellow-600 dark:text-yellow-400 text-sm font-bold">★</span>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Status</p>
+                <Badge
+                  variant={
+                    kbVersion.status === 'published'
+                      ? 'default'
+                      : kbVersion.status === 'archived'
+                      ? 'destructive'
+                      : 'secondary'
+                  }
+                  className="mt-1"
+                >
+                  {kbVersion.status}
+                </Badge>
               </div>
-            )}
-          </div>
-        </div>
-
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Documents</p>
-              <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                {documentsWithVersions.length}
-              </p>
+              {kbVersion.status === 'published' && <CheckCircle className="h-6 w-6 text-green-500" />}
+              {kbVersion.status === 'draft' && <Clock className="h-6 w-6 text-yellow-500" />}
             </div>
-            <FileText className="h-6 w-6 text-blue-500" />
-          </div>
-        </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Access Level</p>
+                <Badge
+                  variant={
+                    kbVersion.access_level === 'public'
+                      ? 'default'
+                      : kbVersion.access_level === 'protected'
+                      ? 'secondary'
+                      : 'outline'
+                  }
+                  className="mt-1"
+                >
+                  {kbVersion.access_level}
+                </Badge>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Primary</p>
+                <p className="text-lg font-semibold">
+                  {kbVersion.is_primary ? 'Yes' : 'No'}
+                </p>
+              </div>
+              {kbVersion.is_primary && (
+                <div className="h-8 w-8 bg-muted rounded-full flex items-center justify-center">
+                  <Star className="h-4 w-4 text-yellow-500" />
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Documents</p>
+                <p className="text-lg font-semibold">
+                  {documentsWithVersions.length}
+                </p>
+              </div>
+              <FileText className="h-6 w-6 text-muted-foreground" />
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Version Details */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-            Version Information
-          </h3>
-          <div className="space-y-3">
-            <div className="flex items-center gap-3">
-              <Calendar className="h-4 w-4 text-gray-500" />
-              <span className="text-sm text-gray-600 dark:text-gray-400">Created:</span>
-              <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                {new Date(kbVersion.created_at).toLocaleDateString()}
-              </span>
-            </div>
-            <div className="flex items-center gap-3">
-              <User className="h-4 w-4 text-gray-500" />
-              <span className="text-sm text-gray-600 dark:text-gray-400">Created by:</span>
-              <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                {kbVersion.created_by || 'Unknown'}
-              </span>
-            </div>
-            {kbVersion.updated_at && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Version Information</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
               <div className="flex items-center gap-3">
-                <Calendar className="h-4 w-4 text-gray-500" />
-                <span className="text-sm text-gray-600 dark:text-gray-400">Updated:</span>
-                <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                  {new Date(kbVersion.updated_at).toLocaleDateString()}
+                <Calendar className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm text-muted-foreground">Created:</span>
+                <span className="text-sm font-medium">
+                  {new Date(kbVersion.created_at).toLocaleDateString()}
                 </span>
               </div>
-            )}
-          </div>
-        </div>
+              <div className="flex items-center gap-3">
+                <User className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm text-muted-foreground">Created by:</span>
+                <span className="text-sm font-medium">
+                  {kbVersion.created_by || 'Unknown'}
+                </span>
+              </div>
+              {kbVersion.updated_at && (
+                <div className="flex items-center gap-3">
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">Updated:</span>
+                  <span className="text-sm font-medium">
+                    {new Date(kbVersion.updated_at).toLocaleDateString()}
+                  </span>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
 
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-            Release Notes
-          </h3>
-          {kbVersion.release_notes ? (
-            <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
-              {kbVersion.release_notes}
-            </p>
-          ) : (
-            <p className="text-sm text-gray-500 dark:text-gray-400 italic">
-              No release notes provided
-            </p>
-          )}
-        </div>
+        <Card>
+          <CardHeader>
+            <CardTitle>Release Notes</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {kbVersion.release_notes ? (
+              <p className="text-sm whitespace-pre-wrap">
+                {kbVersion.release_notes}
+              </p>
+            ) : (
+              <p className="text-sm text-muted-foreground italic">
+                No release notes provided
+              </p>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
       {/* Documents List */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
-        <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-            Included Documents ({documentsWithVersions.length})
-          </h3>
-        </div>
-        
-        {documentsWithVersions.length === 0 ? (
-          <div className="p-6 text-center text-gray-500 dark:text-gray-400">
-            <FileText className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-            <p>No documents included in this version</p>
-          </div>
-        ) : (
-          <div className="divide-y divide-gray-200 dark:divide-gray-700">
-            {documentsWithVersions.map(({ document, documentVersion }) => (
-              <div key={`${document.id}-${documentVersion.id}`} className="p-6">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                        {document.name}
-                      </h4>
-                      {documentVersion.is_archived && (
-                        <div className="flex items-center gap-1 text-orange-600 dark:text-orange-400">
-                          <AlertTriangle className="h-4 w-4" />
-                          <span className="text-xs font-medium">Archived</span>
+      <Card>
+        <CardHeader>
+          <CardTitle>Included Documents ({documentsWithVersions.length})</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {documentsWithVersions.length === 0 ? (
+            <div className="text-center py-8">
+              <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+              <p className="text-muted-foreground">No documents included in this version</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {documentsWithVersions.map(({ document, documentVersion, allDocumentVersions }) => {
+                // Sort all versions by creation date (newest first) and get the latest
+                const sortedVersions = [...allDocumentVersions].sort((a, b) => 
+                  new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+                );
+                const latestVersion = sortedVersions[0];
+                const isLatest = documentVersion.id === latestVersion?.id;
+                return (
+                  <Card key={`${document.id}-${documentVersion.id}`} className="border">
+                    <CardContent className="pt-4">
+                      <div className="flex flex-col gap-1 text-xs">
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <span className="font-semibold">v{documentVersion.version_number}</span>
+                          {documentVersion.version_name && <span className="text-muted-foreground">{documentVersion.version_name}</span>}
+                          {documentVersion.processing_status === 'completed' && (
+                            <Badge variant="default" className="bg-green-600 text-white ml-2">Completed</Badge>
+                          )}
+                          {documentVersion.processing_status === 'pending' && (
+                            <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 ml-2">Pending</Badge>
+                          )}
+                          {documentVersion.processing_status === 'processing' && (
+                            <Badge variant="secondary" className="bg-blue-100 text-blue-800 ml-2">Processing</Badge>
+                          )}
+                          {documentVersion.processing_status === 'failed' && (
+                            <Badge variant="destructive" className="ml-2">Failed</Badge>
+                          )}
+                          {documentVersion.is_archived && (
+                            <Badge variant="outline" className="text-orange-600 border-orange-600 ml-2">archived</Badge>
+                          )}
+                          {isLatest && !documentVersion.is_archived && (
+                            <Badge variant="default" className="bg-green-600 text-white ml-2">latest</Badge>
+                          )}
+                          {!isLatest && !documentVersion.is_archived && (
+                            <Badge variant="secondary" className="bg-yellow-200 text-yellow-900 ml-2">outdated</Badge>
+                          )}
                         </div>
-                      )}
-                    </div>
-                    
-                    {document.description && (
-                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                        {document.description}
-                      </p>
-                    )}
-                    
-                    <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
-                      <span>Version: {documentVersion.version_number}</span>
-                      <span>Status: {documentVersion.processing_status}</span>
-                      <span>Added: {new Date(documentVersion.created_at).toLocaleDateString()}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+                        <div className="flex flex-wrap gap-2">
+                          <div><span className="font-semibold">Created:</span> {new Date(documentVersion.created_at).toLocaleDateString()}</div>
+                          {documentVersion.file_name && <div><span className="font-semibold">File:</span> {documentVersion.file_name}</div>}
+                          {documentVersion.source_url && <div><span className="font-semibold">URL:</span> <a href={documentVersion.source_url} className="underline" target="_blank" rel="noopener noreferrer">{documentVersion.source_url}</a></div>}
+                        </div>
+                        {documentVersion.change_description && (
+                          <div className="mt-0.5"><span className="font-semibold">Description:</span> {documentVersion.change_description}</div>
+                        )}
+                        {documentVersion.is_archived && documentVersion.archive_reason && (
+                          <div className="mt-0.5 text-orange-700"><span className="font-semibold">Archive Reason:</span> {documentVersion.archive_reason}</div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   )
 } 
